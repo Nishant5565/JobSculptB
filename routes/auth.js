@@ -273,7 +273,7 @@ router.get(
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     res.cookie('token', token, { httpOnly: true });
-    res.redirect('http://localhost:5173/dashboard'); // Redirect to the frontend
+    res.redirect(`${process.env.FrontendUrl}`); // Redirect to the frontend
   }
 );
 
