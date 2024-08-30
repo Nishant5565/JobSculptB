@@ -13,7 +13,7 @@ connectDB();
 
 app.use(cors(
      {
-     origin: ['http://localhost:5173' , 'http://192.168.1.2:5173'],
+     origin: ['http://localhost:5173' , 'http://192.168.1.2:5173' , 'https://nishant5565.github.io', 'https://nishant5565.github.io/JobSculpt'],
      credentials: true
      }
 ));
