@@ -18,12 +18,27 @@ module.exports = function (passport) {
           if (user) {
             done(null, user);
           } else {
+            // Ensure emails array is not empty and contains a valid email
+            if (!emails || emails.length === 0 || !emails[0].value) {
+              return done(new Error('No valid email found in profile'), null);
+            }
+
+            let userName = emails[0].value.split('@')[0];
+            let existingUser = await User.findOne({ userName });
+
+            // Generate a unique username if it already exists
+            while (existingUser) {
+              userName = `${userName}${Math.floor(Math.random() * 10000)}`;
+              existingUser = await User.findOne({ userName });
+            }
+
             user = new User({
               googleId: id,
               email: emails[0].value,
-              userName: emails[0].value.split('@')[0],
+              userName,
               emailVerified: true
             });
+
             await user.save();
             done(null, user);
           }

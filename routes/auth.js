@@ -22,7 +22,7 @@ const transporter = nodemailer.createTransport({
 
 //! Register user with email and password
 router.post('/register', async (req, res) => {
-  const { userName, email, password } = req.body;
+  const { userName, email, password , role} = req.body;
   try {
     let user = await User.findOne({ email });
     if (user) {
@@ -33,6 +33,7 @@ router.post('/register', async (req, res) => {
       userName,
       email,
       password,
+      role
     });
 
     const salt = await bcrypt.genSalt(10);
@@ -106,8 +107,8 @@ router.post('/login', async (req, res) => {
         if (err) throw err;
 
         if (!user.emailVerified) {
-          console.log('Email is not validated');
-          return res.status(200).json({ token, msg: 'Email is not validated' });
+          
+          return res.status(200).json({ token, msg: 'Email is not Verified' });
         }
         res.json({ token });
       }
@@ -136,54 +137,54 @@ router.post('/auth-user', async (req, res) => {
 
 });
 
-//! check if User have validated their email 
+//! check if User have Verified their email 
 
-router.post('/check-email-validated', async (req, res) => {
+router.post('/check-email-verified', async (req, res) => {
   const token = req.header('x-auth-token');
   if (!token) {
     return res.status(401).json({ msg: 'No token, authorization denied' });
   }
-
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded.user;
-    const user = await User.findById(req.user.id);
-    if (user.emailValidated) {
-      res.json({ msg: 'Email is validated' });
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
     }
-    res.json({ msg: 'Email is not validated' });
+    if (user.emailVerified) {
+      return res.json({ msg: 'Email is Verified' });
+    } else {
+      return res.status(400).json({ msg: 'Email is not Verified' });
+    }
   } catch (err) {
     res.status(401).json({ msg: 'Token is not valid' });
   }
-
 });
 
 // ! Send Email Verification Link
 
+
 router.post('/send-email-verification-link', async (req, res) => {
-  const userToken = req.header('x-auth-token');
+  const token = req.header('x-auth-token');
   try {
-    const decoded = jwt.verify(userToken, process.env.JWT_SECRET);
-    const user  = await User.findById(decoded.user.id);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
     if (!user) {
       return res.status(400).json({ msg: 'User does not exist' });
     }
+
     const payload = {
       user: {
         id: user.id,
       },
     };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-    user.emailToken = token;
-    await user.save();
+    const demoToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    const verificationLink = `http://localhost:5000/api/auth/verify-email?token=${token}`;
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Email Verification',
-      text: `Please verify your email by clicking on the following link: ${verificationLink}`,
-      html: `<p>Please verify your email by clicking on the following link: <a href="${verificationLink}">${verificationLink}</a></p>`,
+      to: user.email,
+      subject: 'Email Verification Link',
+      html: `<h1>Email Verification</h1>
+      <p>Click <a href="http://localhost:5000/api/auth/verify-email?token=${demoToken}">here</a> to verify your email</p>`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -200,6 +201,7 @@ router.post('/send-email-verification-link', async (req, res) => {
 });
 
 
+
 // ! Verify Email
 
 router.get('/verify-email', async (req, res) => {
@@ -210,9 +212,10 @@ router.get('/verify-email', async (req, res) => {
     if (!user) {
       return res.status(400).json({ msg: 'User does not exist' });
     }
-    user.emailValidated = true;
+    user.emailVerified = true;
     await user.save();
-    res.redirect('http://localhost:3000/login');
+
+    res.json({ msg: 'Email successfully verified' });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
@@ -222,23 +225,28 @@ router.get('/verify-email', async (req, res) => {
 
 //* Google OAuth route
 router.post('/google', async (req, res) => {
-  const { token } = req.body;
+  const { token, role } = req.body;
 
   try {
-    // Verify and process the token here
     const response = await axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${token}`);
     const { sub: googleId, email } = response.data;
 
     let user = await User.findOne({ googleId });
 
     if (user) {
-      // Existing user
       const payload = { user: { id: user.id } };
       const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
       res.json({ token: jwtToken });
     } else {
-      // New user
-      user = new User({ googleId, email });
+      let userName = email.split('@')[0];
+      let existingUser = await User.findOne({ userName });
+
+      while (existingUser) {
+        userName = `${userName}${Math.floor(Math.random() * 10000)}`;
+        existingUser = await User.findOne({ userName });
+      }
+
+      user = new User({ googleId, email, userName , role});
       await user.save();
       const payload = { user: { id: user.id } };
       const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -249,7 +257,6 @@ router.post('/google', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
-
 
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
@@ -269,6 +276,5 @@ router.get(
     res.redirect('http://localhost:5173/dashboard'); // Redirect to the frontend
   }
 );
-
 
 module.exports = router;
