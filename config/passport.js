@@ -7,7 +7,7 @@ module.exports = function (passport) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: '/api/auth/google/callback',
+        callbackURL: "http://localhost:5000/api/auth/google/callback"
       },
       async (accessToken, refreshToken, profile, done) => {
         const { id, emails } = profile;
@@ -21,6 +21,8 @@ module.exports = function (passport) {
             user = new User({
               googleId: id,
               email: emails[0].value,
+              userName: emails[0].value.split('@')[0],
+              emailVerified: true
             });
             await user.save();
             done(null, user);
@@ -37,7 +39,12 @@ module.exports = function (passport) {
     done(null, user.id);
   });
 
-  passport.deserializeUser((id, done) => {
-    User.findById(id, (err, user) => done(err, user));
+  passport.deserializeUser(async (id, done) => {
+    try {
+      const user = await User.findById(id);
+      done(null, user);
+    } catch (err) {
+      done(err, null);
+    }
   });
 };

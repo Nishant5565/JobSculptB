@@ -20,7 +20,7 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-router.get('/dashboard', authMiddleware, async (req, res) => {
+router.post('/dashboard', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     res.json(user);
