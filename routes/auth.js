@@ -184,7 +184,7 @@ router.post('/send-email-verification-link', async (req, res) => {
       to: user.email,
       subject: 'Email Verification Link',
       html: `<h1>Email Verification</h1>
-      <p>Click <a href="http://localhost:5000/api/auth/verify-email?token=${demoToken}">here</a> to verify your email</p>`,
+      <p>Click <a href="${process.env.BackendUrl}/api/auth/verify-email?token=${demoToken}">here</a> to verify your email</p>`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
