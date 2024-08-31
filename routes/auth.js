@@ -153,7 +153,7 @@ router.post('/check-email-verified', async (req, res) => {
     if (user.emailVerified) {
       return res.json({ msg: 'Email is Verified' });
     } else {
-      return res.status(400).json({ msg: 'Email is not Verified' });
+      return res.status(200).json({ msg: 'Email is not Verified' });
     }
   } catch (err) {
     res.status(401).json({ msg: 'Token is not valid' });
