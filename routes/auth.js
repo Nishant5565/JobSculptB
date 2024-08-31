@@ -81,9 +81,10 @@ router.post('/check-username', async (req, res) => {
 
 //! Login user with email and password
 router.post('/login', async (req, res) => {
-  const { email, userName, password } = req.body;
+  const { email, password } = req.body;
+  console.log(email, password);
   try {
-    let user = await User.findOne({ $or: [{ email }, { userName }] });
+    let user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ msg: 'Invalid Credentials' });
     }
@@ -123,6 +124,7 @@ router.post('/login', async (req, res) => {
 
 router.post('/auth-user', async (req, res) => {
   const token = req.header('x-auth-token');
+  console.log(token);
   if (!token) {
     return res.status(401).json({ msg: 'No token, authorization denied' });
   }
