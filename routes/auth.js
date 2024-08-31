@@ -183,8 +183,15 @@ router.post('/send-email-verification-link', async (req, res) => {
       from: process.env.EMAIL_USER,
       to: user.email,
       subject: 'Email Verification Link',
-      html: `<h1>Email Verification</h1>
-      <p>Click <a href="${process.env.BackendUrl}/api/auth/verify-email?token=${demoToken}">here</a> to verify your email</p>`,
+      html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #f9f9f9;">
+        <h2 style="color: #333;">Verify Your Email Address</h2>
+        <p style="color: #555;">Thank you for registering with us. Please click the button below to verify your email address and complete your registration.</p>
+        <a href="${process.env.BackendUrl}/api/auth/verify-email?token=${demoToken}" style="display: inline-block; padding: 10px 20px; margin: 20px 0; font-size: 16px; color: #fff; background-color: #007bff; border-radius: 5px; text-decoration: none;">Verify Email</a>
+        <p style="color: #555;">If you did not request this email, please ignore it.</p>
+        <p style="color: #555;">Best regards,<br>Your Company Name</p>
+      </div>
+    `,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -203,24 +210,28 @@ router.post('/send-email-verification-link', async (req, res) => {
 
 
 // ! Verify Email
-
 router.get('/verify-email', async (req, res) => {
   const { token } = req.query;
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.user.id);
+
     if (!user) {
       return res.status(400).json({ msg: 'User does not exist' });
     }
+
     user.emailVerified = true;
     await user.save();
 
-    res.json({ msg: 'Email successfully verified' });
+    const frontendUrl = `${process.env.FrontendUrl}EmailVerified/${user.username}`;
+    res.redirect(frontendUrl);
+
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
   }
 });
+
 
 
 //* Google OAuth route
