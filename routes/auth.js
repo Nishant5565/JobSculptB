@@ -186,10 +186,10 @@ router.post('/send-email-verification-link', async (req, res) => {
       html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #f9f9f9;">
         <h2 style="color: #333;">Verify Your Email Address</h2>
-        <p style="color: #555;">Thank you for registering with us. Please click the button below to verify your email address and complete your registration.</p>
+        <p style="color: #555;">Thank you for registering with JobSculpt. Please click the button below to verify your email address and complete your registration.</p>
         <a href="${process.env.BackendUrl}/api/auth/verify-email?token=${demoToken}" style="display: inline-block; padding: 10px 20px; margin: 20px 0; font-size: 16px; color: #fff; background-color: #007bff; border-radius: 5px; text-decoration: none;">Verify Email</a>
         <p style="color: #555;">If you did not request this email, please ignore it.</p>
-        <p style="color: #555;">Best regards,<br>Your Company Name</p>
+        <p style="color: #555;">Best regards,<br>JobSculpt</p>
       </div>
     `,
     };
@@ -223,7 +223,7 @@ router.get('/verify-email', async (req, res) => {
     user.emailVerified = true;
     await user.save();
 
-    const frontendUrl = `${process.env.FrontendUrl}email-verified/${user.username}`;
+    const frontendUrl = `${process.env.FrontendUrl}email-verified`;
     res.redirect(frontendUrl);
 
   } catch (err) {
