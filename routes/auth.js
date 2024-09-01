@@ -82,7 +82,6 @@ router.post('/check-username', async (req, res) => {
 //! Login user with email and password
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  console.log(email, password);
   try {
     let user = await User.findOne({ email });
     if (!user) {
@@ -124,7 +123,6 @@ router.post('/login', async (req, res) => {
 
 router.post('/auth-user', async (req, res) => {
   const token = req.header('x-auth-token');
-  console.log(token);
   if (!token) {
     return res.status(401).json({ msg: 'No token, authorization denied' });
   }
