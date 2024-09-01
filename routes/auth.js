@@ -223,7 +223,7 @@ router.get('/verify-email', async (req, res) => {
     user.emailVerified = true;
     await user.save();
 
-    const frontendUrl = `${process.env.FrontendUrl}email-verified`;
+    const frontendUrl = `${process.env.FrontendUrl}/email-verified`;
     res.redirect(frontendUrl);
 
   } catch (err) {
