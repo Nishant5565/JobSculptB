@@ -28,6 +28,15 @@ const UserSchema = new mongoose.Schema({
     required: true,
     default: 'Job',
   },
+  profileImage: {
+    type: String,
+    required: false,
+    default:'https://res.cloudinary.com/dsjyzqnwu/image/upload/v1725361139/ynkcblb9ufqfcf61vzzw.jpg',
+  },
+  about : {
+    type: String,
+    required: false,
+  },
 });
 
 module.exports = mongoose.model('User', UserSchema);

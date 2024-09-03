@@ -184,14 +184,24 @@ router.post('/send-email-verification-link', async (req, res) => {
       to: user.email,
       subject: 'Email Verification Link',
       html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #f9f9f9;">
-        <h2 style="color: #333;">Verify Your Email Address</h2>
-        <p style="color: #555;">Thank you for registering with JobSculpt. Please click the button below to verify your email address and complete your registration.</p>
-        <a href="${process.env.BackendUrl}/api/auth/verify-email?token=${demoToken}" style="display: inline-block; padding: 10px 20px; margin: 20px 0; font-size: 16px; color: #fff; background-color: #007bff; border-radius: 5px; text-decoration: none;">Verify Email</a>
-        <p style="color: #555;">If you did not request this email, please ignore it.</p>
-        <p style="color: #555;">Best regards,<br>JobSculpt</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="" alt="JobSculpt" style="max-width: 150px;">
+        </div>
+        <h2 style="color: #333; text-align: center;">Verify Your Email Address</h2>
+        <p style="color: #555; text-align: center;">Thank you for registering with JobSculpt. Please click the button below to verify your email address and complete your registration.</p>
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${process.env.BackendUrl}/api/auth/verify-email?token=${demoToken}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #007bff; border-radius: 5px; text-decoration: none;">Verify Email</a>
+        </div>
+        <p style="color: #555; text-align: center;">If you did not request this email, please ignore it.</p>
+        <p style="color: #555; text-align: center;">Best regards,<br>JobSculpt Team</p>
+        <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
+          <p>JobSculpt Inc.</p>
+          <p>1234 Street Name, City, State, 12345</p>
+          <p><a href="https://yourcompanywebsite.com" style="color: #007bff; text-decoration: none;">www.yourcompanywebsite.com</a></p>
+        </div>
       </div>
-    `,
+      `,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -287,5 +297,30 @@ router.get(
     res.redirect(`${process.env.FrontendUrl}`); // Redirect to the frontend
   }
 );
+
+router.post('/update-profile', async (req, res) => {
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    const { userName, about } = req.body;
+    console.log(userName, about);
+    user.userName = userName;
+    user.about = about;
+
+
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+  }
+});
 
 module.exports = router;

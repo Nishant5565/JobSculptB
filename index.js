@@ -5,10 +5,13 @@ const passport = require('passport');
 const session = require('express-session');
 const cors = require('cors');
 dotenv.config();
-
-
-
+const cloudinary = require('./routes/cloudinary');
+const fileUpload = require('express-fileupload');
+const User = require('./models/user');
 const app = express();
+const jwt = require('jsonwebtoken');
+
+
 connectDB();
 
 app.use(cors(
@@ -17,6 +20,8 @@ app.use(cors(
      credentials: true
      }
 ));
+
+app.use(fileUpload({ useTempFiles: true }));
 
 
 app.use(express.json());
@@ -29,6 +34,49 @@ require('./config/passport')(passport);
 
 app.use('/api/auth', require('./routes/auth'));
 
+app.post('/upload', async (req, res, next) => {
+
+     try {
+        const token = req.header('x-auth-token');
+        if (!token) {
+            return res.status(401).json({ msg: 'No token, authorization denied' });
+        }
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log(decoded);
+        req.user = decoded.user;
+        console.log(req.user);
+        const user = await User.findById(req.user.id);
+        console.log(user);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        console.log(user);
+
+         const file = req.files.image;
+         const result = await cloudinary.uploader.upload(file.tempFilePath, (err, result) => {
+            console.log(result);
+                if (err) {
+                    console.error(err);
+                    res.status(500).json({ success: false, message: 'Upload failed' });
+                }
+            }
+            );
+        // Save the Cloudinary response to the database
+        user.profileImage = result.secure_url;
+        await user.save();
+
+         // Send the Cloudinary response back to the client
+         res.json({
+             success: true,
+             message: 'Image uploaded successfully!',
+             url: result.secure_url     
+         });
+     } catch (error) {
+         res.status(500).json({ success: false, message: 'Upload failed', error: error.message });
+     }
+ });
+ 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
