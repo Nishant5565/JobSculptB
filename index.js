@@ -42,19 +42,14 @@ app.post('/upload', async (req, res, next) => {
             return res.status(401).json({ msg: 'No token, authorization denied' });
         }
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log(decoded);
         req.user = decoded.user;
-        console.log(req.user);
         const user = await User.findById(req.user.id);
-        console.log(user);
         if (!user) {
             return res.status(404).json({ msg: 'User not found' });
         }
-        console.log(user);
 
          const file = req.files.image;
          const result = await cloudinary.uploader.upload(file.tempFilePath, (err, result) => {
-            console.log(result);
                 if (err) {
                     console.error(err);
                     res.status(500).json({ success: false, message: 'Upload failed' });

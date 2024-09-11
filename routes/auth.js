@@ -311,7 +311,6 @@ router.post('/update-profile', async (req, res) => {
     }
 
     const { userName, about } = req.body;
-    console.log(userName, about);
     user.userName = userName;
     user.about = about;
 
