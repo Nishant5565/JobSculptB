@@ -35,8 +35,7 @@ require('./config/passport')(passport);
 app.use('/api/auth', require('./routes/auth'));
 
 app.post('/upload', async (req, res, next) => {
-
-     try {
+    try {
         const token = req.header('x-auth-token');
         if (!token) {
             return res.status(401).json({ msg: 'No token, authorization denied' });
@@ -48,28 +47,27 @@ app.post('/upload', async (req, res, next) => {
             return res.status(404).json({ msg: 'User not found' });
         }
 
-         const file = req.files.image;
-         const result = await cloudinary.uploader.upload(file.tempFilePath, (err, result) => {
-                if (err) {
-                    console.error(err);
-                    res.status(500).json({ success: false, message: 'Upload failed' });
-                }
-            }
-            );
-        // Save the Cloudinary response to the database
+        const file = req.files.image;
+        const publicId = user.profileImage ? user.profileImage.split('/').pop().split('.')[0] : undefined;
+
+        const result = await cloudinary.uploader.upload(file.tempFilePath, {
+            public_id: publicId,
+            overwrite: true
+        });
+
         user.profileImage = result.secure_url;
         await user.save();
 
-         // Send the Cloudinary response back to the client
-         res.json({
-             success: true,
-             message: 'Image uploaded successfully!',
-             url: result.secure_url     
-         });
-     } catch (error) {
-         res.status(500).json({ success: false, message: 'Upload failed', error: error.message });
-     }
- });
+        // Send the Cloudinary response back to the client
+        res.json({
+            success: true,
+            message: 'Image uploaded successfully!',
+            url: result.secure_url
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Upload failed', error: error.message });
+    }
+});
  
 const PORT = process.env.PORT || 5000;
 
