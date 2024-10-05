@@ -6,6 +6,8 @@ const passport = require('passport');
 const axios = require('axios');
 const router = express.Router();
 const nodemailer = require('nodemailer');
+const useragent =  require('useragent');
+const geoip = require('geoip-lite');
 
 //! Node Mailer Setup  
 
@@ -82,6 +84,14 @@ router.post('/check-username', async (req, res) => {
 //! Login user with email and password
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
+  const userAgent = req.headers['user-agent'];
+  const agent = useragent.parse(userAgent);
+  const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
+  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const geo = geoip.lookup(ip);
+
+  const location = geo ? `${geo.city}, ${geo.region}, ${geo.country}` : 'Unknown location';
+
   try {
     let user = await User.findOne({ email });
     if (!user) {
@@ -93,6 +103,13 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ msg: 'Invalid Credentials' });
     }
 
+    // Update the devices array with the new device
+    const deviceExists = user.devices.some(device => device.deviceName === deviceName && device.location === location);
+    if (!deviceExists) {
+      user.devices.push({ uid: user.id, deviceName, location, lastLogin: new Date() });
+      await user.save();
+    }
+
     const payload = {
       user: {
         id: user.id,
@@ -102,12 +119,11 @@ router.post('/login', async (req, res) => {
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
-      { expiresIn: '1h' },
+      { expiresIn: '3h' },
       (err, token) => {
         if (err) throw err;
 
         if (!user.emailVerified) {
-          
           return res.status(200).json({ token, msg: 'Email is not Verified' });
         }
         res.json({ token });
@@ -118,6 +134,74 @@ router.post('/login', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
+
+//* Google OAuth route
+
+router.post('/google', async (req, res) => {
+  const { token, role } = req.body;
+  const userAgent = req.headers['user-agent'];
+  const agent = useragent.parse(userAgent);
+  const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
+  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const geo = geoip.lookup(ip);
+  const location = geo ? `${geo.city}, ${geo.region}, ${geo.country}` : 'Unknown location';
+  console.log(location);
+  try {
+    const response = await axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${token}`);
+    const { sub: googleId, email } = response.data;
+
+    let user = await User.findOne({ googleId });
+
+    if (user) {
+      const deviceExists = user.devices.some(device => device.deviceName === deviceName && device.location === location);
+      console.log(deviceExists);
+      if (!deviceExists) {
+        user.devices.push({ uid: googleId, deviceName, location, lastLogin: new Date() });
+        await user.save();
+      }
+      const payload = { user: { id: user.id } };
+      const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '3h' });
+      res.json({ token: jwtToken });
+    } else {
+      let userName = email.split('@')[0];
+      let existingUser = await User.findOne({ userName });
+
+      while (existingUser) {
+        userName = `${userName}${Math.floor(Math.random() * 10000)}`;
+        existingUser = await User.findOne({ userName });
+      }
+
+      user = new User({ googleId, email, userName, role, devices: [{ uid: googleId, deviceName, location, lastLogin: new Date() }] });
+      await user.save();
+      const payload = { user: { id: user.id } };
+      const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+      res.json({ token: jwtToken });
+    }
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+router.get(
+  '/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  async (req, res) => {
+    const payload = {
+      user: {
+        id: req.user.id,
+      },
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    res.cookie('token', token, { httpOnly: true });
+    res.redirect(`${process.env.FrontendUrl}`); // Redirect to the frontend
+  }
+);
 
 // ! Auth user
 
@@ -244,59 +328,7 @@ router.get('/verify-email', async (req, res) => {
 
 
 
-//* Google OAuth route
-router.post('/google', async (req, res) => {
-  const { token, role } = req.body;
 
-  try {
-    const response = await axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${token}`);
-    const { sub: googleId, email } = response.data;
-
-    let user = await User.findOne({ googleId });
-
-    if (user) {
-      const payload = { user: { id: user.id } };
-      const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-      res.json({ token: jwtToken });
-    } else {
-      let userName = email.split('@')[0];
-      let existingUser = await User.findOne({ userName });
-
-      while (existingUser) {
-        userName = `${userName}${Math.floor(Math.random() * 10000)}`;
-        existingUser = await User.findOne({ userName });
-      }
-
-      user = new User({ googleId, email, userName , role});
-      await user.save();
-      const payload = { user: { id: user.id } };
-      const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-      res.json({ token: jwtToken });
-    }
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
-  }
-});
-
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-
-router.get(
-  '/google/callback',
-  passport.authenticate('google', { failureRedirect: '/login' }),
-  async (req, res) => {
-    const payload = {
-      user: {
-        id: req.user.id,
-      },
-    };
-
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-    res.cookie('token', token, { httpOnly: true });
-    res.redirect(`${process.env.FrontendUrl}`); // Redirect to the frontend
-  }
-);
 
 router.post('/update-profile', async (req, res) => {
   const token = req.header('x-auth-token');
@@ -321,5 +353,26 @@ router.post('/update-profile', async (req, res) => {
     res.status(401).json({ msg: 'Token is not valid' });
   }
 });
+
+// ! Get Devices of User
+
+router.get('/devices', async (req, res) => {
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    res.json(user.devices);
+  } catch (err) { 
+    res.status(401).json({ msg: 'Token is not valid' });
+  }
+
+} );
+
 
 module.exports = router;

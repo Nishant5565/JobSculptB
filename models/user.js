@@ -1,5 +1,25 @@
 const mongoose = require('mongoose');
 
+const DeviceSchema = new mongoose.Schema({
+  uid: {
+    type: String,
+    required: true,
+  },
+  deviceName: {
+    type: String,
+    required: true,
+  },
+  location: {
+    type: String,
+    required: true,
+  },
+  lastLogin: {
+    type: Date,
+    required: true,
+    default: Date.now,
+  },
+});
+
 const UserSchema = new mongoose.Schema({
   userName: {
     type: String,
@@ -23,7 +43,7 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
-  role : {
+  role: {
     type: String,
     required: true,
     default: 'Job',
@@ -31,12 +51,14 @@ const UserSchema = new mongoose.Schema({
   profileImage: {
     type: String,
     required: false,
-    default:'https://res.cloudinary.com/dsjyzqnwu/image/upload/v1725361139/ynkcblb9ufqfcf61vzzw.jpg',
+    default: 'https://res.cloudinary.com/dsjyzqnwu/image/upload/v1725361139/ynkcblb9ufqfcf61vzzw.jpg',
   },
-  about : {
+  about: {
     type: String,
     required: false,
   },
+  devices: [DeviceSchema],
+
 });
 
 module.exports = mongoose.model('User', UserSchema);

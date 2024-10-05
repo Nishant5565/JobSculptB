@@ -48,6 +48,10 @@ app.post('/upload', async (req, res, next) => {
         }
 
         const file = req.files.image;
+        // if file size is greater than 5mb then return message
+        if(file.size > 5 * 1024 * 1024) {
+            return res.status(400).json({ success: false, message: 'Image should be less than 5mb' });
+        }
         const publicId = user.profileImage ? user.profileImage.split('/').pop().split('.')[0] : undefined;
 
         const result = await cloudinary.uploader.upload(file.tempFilePath, {
@@ -58,7 +62,6 @@ app.post('/upload', async (req, res, next) => {
         user.profileImage = result.secure_url;
         await user.save();
 
-        // Send the Cloudinary response back to the client
         res.json({
             success: true,
             message: 'Image uploaded successfully!',
@@ -68,6 +71,8 @@ app.post('/upload', async (req, res, next) => {
         res.status(500).json({ success: false, message: 'Upload failed', error: error.message });
     }
 });
+
+// update image
  
 const PORT = process.env.PORT || 5000;
 
