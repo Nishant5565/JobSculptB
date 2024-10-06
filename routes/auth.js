@@ -172,7 +172,9 @@ router.post('/google', async (req, res) => {
         existingUser = await User.findOne({ userName });
       }
 
-      user = new User({ googleId, email, userName, role, devices: [{ uid: googleId, deviceName, location, lastLogin: new Date() }] });
+      const isGoogleUser = true;
+
+      user = new User({ googleId, email, isGoogleUser ,  userName, role, devices: [{ uid: googleId, deviceName, location, lastLogin: new Date() }] });
       await user.save();
       const payload = { user: { id: user.id } };
       const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -202,6 +204,9 @@ router.get(
     res.redirect(`${process.env.FrontendUrl}`); // Redirect to the frontend
   }
 );
+
+
+
 
 // ! Auth user
 
@@ -373,6 +378,215 @@ router.get('/devices', async (req, res) => {
   }
 
 } );
+
+
+// * Updation API's
+
+
+// ! Change Role
+
+router.post('/change-role', async (req, res) => {
+
+  const { role } = req.body;
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    console.log(role);
+    user.role = role;
+    await user.save();
+    res.json(user);
+  }
+  catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+  }
+});
+
+// ! Update Profile Complete Status
+
+router.post('/update-profile-complete-status', async (req, res) => {
+  const { status } = req.body;
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    user.profileCompleteStatus = status;
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+  }
+}
+);
+
+
+// ! Update User Name and Name
+
+router.post('/update-username', async (req, res) => {
+  const { userName, name } = req.body;
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    user.userName = userName;
+    user.name = name;
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+  }
+});
+
+// ! Update Education
+
+router.post('/update-education', async (req, res) => {
+  const { education } = req.body;
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    user.education = education;
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+    console.error(err.message);
+  }
+});
+
+// ! Edit Education
+
+router.post('/edit-education', async (req, res) => {
+  const { education, index } = req.body;
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    user.education[index] = education;
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+    console.error(err.message);
+  }
+});
+
+// ! Update Work Experience
+
+router.post('/update-work-experience', async (req, res) => {
+  const { experience } = req.body;
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    user.workExperience = experience;
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+    console.error(err.message);
+  }
+});
+
+
+// ! Edit Work Experience
+
+router.post('/edit-work-experience', async (req, res) => {
+  const { experience, index } = req.body;
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    user.workExperience[index] = experience;
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+    console.error(err.message);
+  }
+}
+);
+
+// ! Delete Work Experience
+
+router.post('/delete-work-experience', async (req, res) => {
+  const { index } = req.body;
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    user.workExperience.splice(index, 1);
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+    console.error(err.message);
+  }
+}
+);
 
 
 module.exports = router;

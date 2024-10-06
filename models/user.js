@@ -15,20 +15,66 @@ const DeviceSchema = new mongoose.Schema({
   },
   lastLogin: {
     type: Date,
-    required: true,
     default: Date.now,
+  },
+});
+
+const EducationSchema = new mongoose.Schema({
+  institution: {
+    type: String,
+    required: true,
+  },
+  degree: {
+    type: String,
+  },  
+  fieldOfStudy: {
+    type: String,
+    required: true,
+  },
+  from: {
+    type: Date,
+    required: true,
+  },
+  to: {
+    type: Date,
+  },
+  description: {
+    type: String,
+  },
+});
+
+
+const WorkExperienceSchema = new mongoose.Schema({
+  company: {
+    type: String,
+    required: true,
+  },
+  position: {
+    type: String,
+    required: true,
+  },
+  from: {
+    type: Date,
+    required: true,
+  },
+  to: {
+    type: Date,
+  },
+  description: {
+    type: String,
   },
 });
 
 const UserSchema = new mongoose.Schema({
   userName: {
     type: String,
-    required: false,
+    required: true,
     unique: true,
   },
-  emailVerified: {
-    type: Boolean,
-    required: false,
+  role : {
+    type: String,
+    required: true,
+    default: 'user',
   },
   email: {
     type: String,
@@ -37,28 +83,48 @@ const UserSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: false,
   },
   googleId: {
     type: String,
+  },
+  isGoogleUser: {
+    type: Boolean,
+    default: false,
+  },
+  profileCompleteStatus: {
+    type: 'String',
+    default: 'Incomplete',
+  },
+  name: {
+    type: String,
     required: false,
   },
-  role: {
+  twoFactorAuth: {
+    type: Boolean,
+    default: false,
+  },
+  devices: [DeviceSchema],
+  education: [EducationSchema],
+  workExperience: [WorkExperienceSchema],
+  profileCompleted: {
+    type: Boolean,
+    default: false,
+  },
+  skills: {
+    type: [String],
+  },
+  linkedAccounts: {
+    type: Map, 
+    of: String,
+  },
+  overview: {
     type: String,
-    required: true,
-    default: 'Job',
   },
   profileImage: {
     type: String,
-    required: false,
-    default: 'https://res.cloudinary.com/dsjyzqnwu/image/upload/v1725361139/ynkcblb9ufqfcf61vzzw.jpg',
+    default: 'noImage',
   },
-  about: {
-    type: String,
-    required: false,
-  },
-  devices: [DeviceSchema],
-
 });
 
 module.exports = mongoose.model('User', UserSchema);
+
