@@ -24,7 +24,7 @@ const transporter = nodemailer.createTransport({
 
 //! Register user with email and password
 router.post('/register', async (req, res) => {
-  const { userName, email, password , role} = req.body;
+  const {  email, password , role, theme} = req.body;
   try {
     let user = await User.findOne({ email });
     if (user) {
@@ -32,10 +32,10 @@ router.post('/register', async (req, res) => {
     }
 
     user = new User({
-      userName,
       email,
       password,
-      role
+      role, 
+      theme
     });
 
     const salt = await bcrypt.genSalt(10);
@@ -332,33 +332,6 @@ router.get('/verify-email', async (req, res) => {
 });
 
 
-
-
-
-router.post('/update-profile', async (req, res) => {
-  const token = req.header('x-auth-token');
-  if (!token) {
-    return res.status(401).json({ msg: 'No token, authorization denied' });
-  }
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.user.id);
-    if (!user) {
-      return res.status(404).json({ msg: 'User not found' });
-    }
-
-    const { userName, about } = req.body;
-    user.userName = userName;
-    user.about = about;
-
-
-    await user.save();
-    res.json(user);
-  } catch (err) {
-    res.status(401).json({ msg: 'Token is not valid' });
-  }
-});
-
 // ! Get Devices of User
 
 router.get('/devices', async (req, res) => {
@@ -435,10 +408,10 @@ router.post('/update-profile-complete-status', async (req, res) => {
 );
 
 
-// ! Update User Name and Name
+// ! Update User Name and Name and About
 
 router.post('/update-username', async (req, res) => {
-  const { userName, name } = req.body;
+  const { userName, name , about} = req.body;
   const token = req.header('x-auth-token');
   if (!token) {
     return res.status(401).json({ msg: 'No token, authorization denied' });
@@ -453,6 +426,9 @@ router.post('/update-username', async (req, res) => {
 
     user.userName = userName;
     user.name = name;
+    if(about != undefined || about !== null){
+      user.about = about;
+    }
     await user.save();
     res.json(user);
   } catch (err) {
@@ -587,6 +563,74 @@ router.post('/delete-work-experience', async (req, res) => {
   }
 }
 );
+
+// ! Get user Skills 
+
+router.get('/user-skills', async (req, res) => {
+  try {
+    const user = await User.findOne();
+    if (!user) {
+      return res.status(404).json({ msg: 'No skills found' });
+    }
+    res.json(user.skills);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// ! Add User Skills
+
+router.post('/add-user-skills', async (req, res) => {
+  const { skills } = req.body;
+
+  try {
+    let user = await User.findOne();
+    if (!user) {
+      user = new User({ skills: [] });
+    }
+    const validSkills = skills.filter((item) => item.skill);
+
+    const newSkills = validSkills.filter(
+      (item) => !user.skills.some((s) => s.skill === item.skill)
+    );
+
+    newSkills.forEach((item) => {
+      user.skills.push({ skill: item.skill });
+    });
+
+    const savedSkills = await user.save();
+    res.json({ savedSkills, msg: 'Skills added successfully' });
+
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// ! Delete User Skills
+
+router.delete('/delete-user-skills/:name', async (req, res) => {
+  const { name } = req.params;
+  try {
+    const user = await User.findOne();
+    if (!user) {
+      return res.status(404).json({ msg: 'No skills found' });
+    }
+
+    const removeIndex = user.skills.map((item) => item.skill).indexOf(name);
+    if (removeIndex === -1) {
+      return res.status(404).json({ msg: 'Skill not found' });
+    }
+
+    user.skills.splice(removeIndex, 1);
+    await user.save();
+    res.json(user.skills);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
 
 module.exports = router;

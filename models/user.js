@@ -81,6 +81,10 @@ const UserSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  emailVerified: {
+    type: Boolean,
+    default: false,
+  },
   password: {
     type: String,
   },
@@ -123,6 +127,14 @@ const UserSchema = new mongoose.Schema({
   profileImage: {
     type: String,
     default: 'noImage',
+  },
+  about : {
+    type : String,
+    require : false
+  },
+  theme: {
+    type: String,
+    default: 'light',
   },
 });
 
