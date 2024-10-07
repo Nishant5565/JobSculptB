@@ -28,6 +28,7 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:5174',
     'http://192.168.1.2:5173',
+    'https://nishant5565.github.io/',
     'https://nishant5565.github.io',
     'https://nishant5565.github.io/JobSculpt'
   ],
