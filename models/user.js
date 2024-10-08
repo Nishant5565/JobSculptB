@@ -68,7 +68,6 @@ const WorkExperienceSchema = new mongoose.Schema({
 const UserSchema = new mongoose.Schema({
   userName: {
     type: String,
-    required: true,
     unique: true,
   },
   role : {
@@ -114,9 +113,18 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  skills: {
-    type: [String],
-  },
+  skills: [
+    {
+      skill: {
+        type: String,
+        required: true,
+      },
+      proficiency: {
+        type: String,
+        required: true,
+      },
+    },
+  ],
   linkedAccounts: {
     type: Map, 
     of: String,
@@ -135,6 +143,10 @@ const UserSchema = new mongoose.Schema({
   theme: {
     type: String,
     default: 'light',
+  },
+  dob: {
+    type: Date,
+    default: Date.now,
   },
 });
 

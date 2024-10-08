@@ -103,12 +103,13 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ msg: 'Invalid Credentials' });
     }
 
-    // Update the devices array with the new device
+
     const deviceExists = user.devices.some(device => device.deviceName === deviceName && device.location === location);
     if (!deviceExists) {
       user.devices.push({ uid: user.id, deviceName, location, lastLogin: new Date() });
       await user.save();
     }
+    const theme = user.theme;
 
     const payload = {
       user: {
@@ -124,9 +125,9 @@ router.post('/login', async (req, res) => {
         if (err) throw err;
 
         if (!user.emailVerified) {
-          return res.status(200).json({ token, msg: 'Email is not Verified' });
+          return res.status(200).json({ token, msg: 'Email is not Verified', theme });
         }
-        res.json({ token });
+        res.json({ token, theme });
       }
     );
   } catch (err) {
@@ -173,16 +174,20 @@ router.post('/google', async (req, res) => {
       }
 
       const isGoogleUser = true;
+      const emailVerified = true;
 
-      user = new User({ googleId, email, isGoogleUser ,  userName, role, devices: [{ uid: googleId, deviceName, location, lastLogin: new Date() }] });
+      user = new User({ googleId, email, isGoogleUser ,emailVerified, userName, role, devices: [{ uid: googleId, deviceName, location, lastLogin: new Date() }] });
       await user.save();
       const payload = { user: { id: user.id } };
       const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
       res.json({ token: jwtToken });
     }
   } catch (err) {
+    if (err.message.includes('E11000')) {
+      return res.status(400).json({ msg: 'User already exists with this email' });
+    }
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ msg: err.message });
   }
 });
 
@@ -275,19 +280,19 @@ router.post('/send-email-verification-link', async (req, res) => {
       html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="" alt="JobSculpt" style="max-width: 150px;">
+          <img src="https://res.cloudinary.com/dsjyzqnwu/image/upload/v1725359081/TitleLogo_zjmlrf.png" alt="JobSculpt" style="max-width: 150px;">
         </div>
         <h2 style="color: #333; text-align: center;">Verify Your Email Address</h2>
         <p style="color: #555; text-align: center;">Thank you for registering with JobSculpt. Please click the button below to verify your email address and complete your registration.</p>
         <div style="text-align: center; margin: 20px 0;">
-          <a href="${process.env.BackendUrl}/api/auth/verify-email?token=${demoToken}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #007bff; border-radius: 5px; text-decoration: none;">Verify Email</a>
+          <a href="${process.env.BackendUrl}/api/auth/verify-email?token=${demoToken}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #000; border-radius: 10px; text-decoration: none;">Verify Email</a>
         </div>
         <p style="color: #555; text-align: center;">If you did not request this email, please ignore it.</p>
         <p style="color: #555; text-align: center;">Best regards,<br>JobSculpt Team</p>
         <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
           <p>JobSculpt Inc.</p>
           <p>1234 Street Name, City, State, 12345</p>
-          <p><a href="https://yourcompanywebsite.com" style="color: #007bff; text-decoration: none;">www.yourcompanywebsite.com</a></p>
+          <p><a href="${process.env.FrontendUrl}" style="color: #007bff; text-decoration: none;" target="_blank">www.jobsculpt.com</a></p>
         </div>
       </div>
       `,
@@ -326,7 +331,7 @@ router.get('/verify-email', async (req, res) => {
     res.redirect(frontendUrl);
 
   } catch (err) {
-    console.error(err.message);
+    console.error(err.message);3
     res.status(500).send('Server error');
   }
 });
@@ -375,7 +380,7 @@ router.post('/change-role', async (req, res) => {
     console.log(role);
     user.role = role;
     await user.save();
-    res.json(user);
+    res.json({user , msg: 'Role changed succesfully to ' + role});
   }
   catch (err) {
     res.status(401).json({ msg: 'Token is not valid' });
@@ -411,7 +416,7 @@ router.post('/update-profile-complete-status', async (req, res) => {
 // ! Update User Name and Name and About
 
 router.post('/update-username', async (req, res) => {
-  const { userName, name , about} = req.body;
+  const { userName, name , about, dob} = req.body;
   const token = req.header('x-auth-token');
   if (!token) {
     return res.status(401).json({ msg: 'No token, authorization denied' });
@@ -426,11 +431,35 @@ router.post('/update-username', async (req, res) => {
 
     user.userName = userName;
     user.name = name;
+    user.dob = dob;
     if(about != undefined || about !== null){
       user.about = about;
     }
     await user.save();
     res.json(user);
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+  }
+});
+
+// ! Update user theme 
+
+router.post('/update-theme', async (req, res) => {
+  const { theme } = req.body;
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+  try {
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    user.theme = theme;
+    await user.save();
+    res.json({ user, msg: 'Theme updated successfully' });
   } catch (err) {
     res.status(401).json({ msg: 'Token is not valid' });
   }
@@ -567,8 +596,14 @@ router.post('/delete-work-experience', async (req, res) => {
 // ! Get user Skills 
 
 router.get('/user-skills', async (req, res) => {
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+  
   try {
-    const user = await User.findOne();
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
     if (!user) {
       return res.status(404).json({ msg: 'No skills found' });
     }
@@ -582,38 +617,47 @@ router.get('/user-skills', async (req, res) => {
 // ! Add User Skills
 
 router.post('/add-user-skills', async (req, res) => {
-  const { skills } = req.body;
+  const { skill, proficiency } = req.body;
+  const token = req.header('x-auth-token');
 
   try {
-    let user = await User.findOne();
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
     if (!user) {
-      user = new User({ skills: [] });
+      return res.status(404).json({ msg: 'User not found' });
     }
-    const validSkills = skills.filter((item) => item.skill);
 
-    const newSkills = validSkills.filter(
-      (item) => !user.skills.some((s) => s.skill === item.skill)
-    );
+    const newSkill = { skill, proficiency };
 
-    newSkills.forEach((item) => {
-      user.skills.push({ skill: item.skill });
-    });
+    // if skills are more than 12 then return error
+    if (user.skills.length >= 12) {
+      return res.status(400).json({ msg: 'You can add maximum 12 skills' });
+    }
 
-    const savedSkills = await user.save();
-    res.json({ savedSkills, msg: 'Skills added successfully' });
-
+    if (user.skills.some((item) => item.skill === skill)) {
+      return res.status(400).json({ msg: 'Skill already exists' });
+    }
+    user.skills.unshift(newSkill);
+    await user.save();
+    res.status(200).json(user.skills);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
   }
+
+
 });
 
 // ! Delete User Skills
 
-router.delete('/delete-user-skills/:name', async (req, res) => {
-  const { name } = req.params;
+router.post('/delete-user-skill', async (req, res) => {
+  const  {name}  = req.body;
+  console.log(name);
+  const token = req.header('x-auth-token');
   try {
-    const user = await User.findOne();
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
     if (!user) {
       return res.status(404).json({ msg: 'No skills found' });
     }
