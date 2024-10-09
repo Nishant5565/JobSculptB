@@ -7,7 +7,9 @@ const axios = require('axios');
 const router = express.Router();
 const nodemailer = require('nodemailer');
 const useragent =  require('useragent');
+const requestIp = require('request-ip');
 const geoip = require('geoip-lite');
+
 
 //! Node Mailer Setup  
 
@@ -23,6 +25,7 @@ const transporter = nodemailer.createTransport({
 
 
 //! Register user with email and password
+
 router.post('/register', async (req, res) => {
   const { email, password, role, theme } = req.body;
 
@@ -37,8 +40,22 @@ router.post('/register', async (req, res) => {
     const agent = useragent.parse(userAgent);
     const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const geo = geoip.lookup(ip);
-    const location = geo ? `${geo.city}, ${geo.region}, ${geo.country}` : 'Unknown location';
+    const getIp = requestIp.getClientIp(req);
+
+    console.log(`IP Address: ${ip}`);
+    console.log(`IP Address: ${getIp}`);
+
+
+    const apiUrl = `http://ip-api.com/json/${ip}?fields=status,message,country,region,city,zip,lat,lon,timezone,isp,org`;
+
+    const apiResponse = await axios.get(apiUrl);
+    const { status, country, region, city } = apiResponse.data;
+
+    let location = 'Unknown location'; // Default
+    if (status === 'success') {
+      location = `${city}, ${region}, ${country}`;
+    }
+    console.log(`Location: ${location}`);
 
     user = new User({
       email,
@@ -46,6 +63,7 @@ router.post('/register', async (req, res) => {
       role,
       theme,
       devices: [{
+        uid: email,
         deviceName,
         ip,
         location,
@@ -67,17 +85,20 @@ router.post('/register', async (req, res) => {
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
-      { expiresIn: '1h' },
+      { expiresIn: '3h' },
       (err, token) => {
         if (err) throw err;
         res.json({ token });
       }
     );
+    res.json({user});
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
   }
 });
+
+module.exports = router;
 //! Check username availability
 
 router.post('/check-username', async (req, res) => {
@@ -104,7 +125,6 @@ router.post('/check-username', async (req, res) => {
 } );
 
 //! Login user with email and password
-
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   const userAgent = req.headers['user-agent'];
@@ -139,7 +159,6 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ msg: 'Invalid Credentials' });
     }
 
-    // Check if the device and location are new, add if not exists
     const deviceExists = user.devices.some(device => device.deviceName === deviceName && device.location === location);
     if (!deviceExists) {
       user.devices.push({ uid: user.id, deviceName, location, lastLogin: new Date() });
@@ -172,18 +191,32 @@ router.post('/login', async (req, res) => {
   }
 });
 
-//* Google OAuth route
-
+// Google OAuth route
 router.post('/google', async (req, res) => {
   const { token, role } = req.body;
+  console.log("Body \n" + JSON.stringify(req.body, null, 2));
+  console.log("Headers \n" + JSON.stringify(req.headers, null, 2));
   const userAgent = req.headers['user-agent'];
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
   const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  const geo = geoip.lookup(ip);
-  const location = geo ? `${geo.city}, ${geo.region}, ${geo.country}` : 'Unknown location';
-  console.log(location);
+  const getIp = requestIp.getClientIp(req);
+  console.log(ip);
+  console.log(getIp);
+
+  // IP-API endpoint URL (to get location details from the user's IP)
+  const apiUrl = `http://ip-api.com/json/${ip}?fields=status,message,country,region,city,zip,lat,lon,timezone,isp,org`;
+
   try {
+    // Fetch location details from IP-API
+    const apiResponse = await axios.get(apiUrl);
+    const { status, country, region, city } = apiResponse.data;
+
+    let location = 'Unknown location'; // Default
+    if (status === 'success') {
+      location = `${city}, ${region}, ${country}`;
+    }
+
     const response = await axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${token}`);
     const { sub: googleId, email } = response.data;
 
@@ -211,7 +244,7 @@ router.post('/google', async (req, res) => {
       const isGoogleUser = true;
       const emailVerified = true;
 
-      user = new User({ googleId, email, isGoogleUser ,emailVerified, userName, role, devices: [{ uid: googleId, deviceName, location, lastLogin: new Date() }] });
+      user = new User({ googleId, email, isGoogleUser, emailVerified, userName, role, devices: [{ uid: googleId, deviceName, location, lastLogin: new Date() }] });
       await user.save();
       const payload = { user: { id: user.id } };
       const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -225,6 +258,7 @@ router.post('/google', async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 });
+
 
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 

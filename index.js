@@ -22,15 +22,20 @@ require('events').EventEmitter.defaultMaxListeners = 20;
 // Connect to MongoDB
 connectDB();
 
-// Middleware
+// app.use((req, res, next) => {
+//   console.log('Request Origin:', req.headers.origin);
+//   next();
+// });
+
 app.use(cors({
   origin: [
     'http://localhost:5173',
     'http://localhost:5174',
-    'http://192.168.1.2:5173',
     'https://nishant5565.github.io/',
     'https://nishant5565.github.io',
-    'https://nishant5565.github.io/JobSculpt'
+    'https://nishant5565.github.io/JobSculpt',
+    'https://v811xkq7-5173.inc1.devtunnels.ms/',
+    'https://v811xkq7-5173.inc1.devtunnels.ms',
   ],
   credentials: true
 }));
@@ -44,6 +49,7 @@ app.use(passport.session());
 require('./config/passport')(passport);
 
 // Routes
+
 app.use('/api/auth', authRoutes);
 app.use('/api/jobsculpt/admin/auth', adminRoutes);
 
