@@ -104,17 +104,31 @@ router.post('/check-username', async (req, res) => {
 } );
 
 //! Login user with email and password
+
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   const userAgent = req.headers['user-agent'];
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
-  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  const geo = geoip.lookup(ip);
 
-  const location = geo ? `${geo.city}, ${geo.region}, ${geo.country}` : 'Unknown location';
+  // Get the user's IP address
+  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  console.log(ip);
+
+  // IP-API endpoint URL (to get location details from the user's IP)
+  const apiUrl = `http://ip-api.com/json/${ip}?fields=status,message,country,region,city,zip,lat,lon,timezone,isp,org`;
 
   try {
+    // Fetch location details from IP-API
+    const apiResponse = await axios.get(apiUrl);
+    const { status, country, region, city } = apiResponse.data;
+
+    let location = 'Unknown location'; // Default
+    if (status === 'success') {
+      location = `${city}, ${region}, ${country}`;
+    }
+
+    // Proceed with login logic
     let user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ msg: 'Invalid Credentials' });
@@ -125,7 +139,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ msg: 'Invalid Credentials' });
     }
 
-
+    // Check if the device and location are new, add if not exists
     const deviceExists = user.devices.some(device => device.deviceName === deviceName && device.location === location);
     if (!deviceExists) {
       user.devices.push({ uid: user.id, deviceName, location, lastLogin: new Date() });
@@ -157,7 +171,6 @@ router.post('/login', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
-
 
 //* Google OAuth route
 
