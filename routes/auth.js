@@ -24,18 +24,33 @@ const transporter = nodemailer.createTransport({
 
 //! Register user with email and password
 router.post('/register', async (req, res) => {
-  const {  email, password , role, theme} = req.body;
+  const { email, password, role, theme } = req.body;
+
   try {
     let user = await User.findOne({ email });
+
     if (user) {
       return res.status(400).json({ msg: 'User already exists' });
     }
 
+    const userAgent = req.headers['user-agent'];
+    const agent = useragent.parse(userAgent);
+    const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const geo = geoip.lookup(ip);
+    const location = geo ? `${geo.city}, ${geo.region}, ${geo.country}` : 'Unknown location';
+
     user = new User({
       email,
       password,
-      role, 
-      theme
+      role,
+      theme,
+      devices: [{
+        deviceName,
+        ip,
+        location,
+        lastLogin: new Date()
+      }]
     });
 
     const salt = await bcrypt.genSalt(10);
@@ -63,23 +78,30 @@ router.post('/register', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
-
 //! Check username availability
 
 router.post('/check-username', async (req, res) => {
   const { userName } = req.body;
-  try {
-    let user = await
-      User.findOne({ userName });
-    if (user) {
-      return res.status(200).json({ msg: 'Username already exists' });
-    }
-    res.status(200).json({ msg: 'Username is available' });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
   }
-});
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    // check if userName coming from request is same as user.userName if so return username is available, else chekc if userName is already taken
+    if (user.userName === userName) {
+      return res.json({ msg: 'Username is available' });
+    }
+    const userNameExists = await User.findOne({ userName });
+    if (userNameExists) {
+      return res.status(400).json({ msg: 'Username is already taken' });
+    }
+    res.json({ msg: 'Username is available' });
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+  }
+} );
 
 //! Login user with email and password
 router.post('/login', async (req, res) => {
@@ -327,7 +349,7 @@ router.get('/verify-email', async (req, res) => {
     user.emailVerified = true;
     await user.save();
 
-    const frontendUrl = `${process.env.FrontendUrl}/email-verified`;
+    const frontendUrl = `${process.env.FrontendUrl}email-verified`;
     res.redirect(frontendUrl);
 
   } catch (err) {
@@ -510,6 +532,31 @@ router.post('/edit-education', async (req, res) => {
     await user.save();
     res.json(user);
   } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+    console.error(err.message);
+  }
+});
+
+
+// ! Delete Education 
+
+router.post('/delete-education', async (req, res) => {
+  const { index } = req.body;
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+  try{
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    user.education.splice(index, 1);
+    await user.save();
+    res.json(user);
+  }
+  catch(err){
     res.status(401).json({ msg: 'Token is not valid' });
     console.error(err.message);
   }
