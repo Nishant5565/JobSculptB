@@ -40,7 +40,7 @@ router.post('/register', async (req, res) => {
     const userAgent = req.headers['user-agent'];
     const agent = useragent.parse(userAgent);
     const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
-    const ip = req.clientIp;
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const getGeo = geoip.lookup(ip);
     let location = 'Unknown Location';
     if (getGeo) {
@@ -119,6 +119,7 @@ router.post('/check-username', async (req, res) => {
 //! Login user with email and password
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
+  console.log("Headers \n" + JSON.stringify(req.headers, null, 2));
   const userAgent = req.headers['user-agent'];
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
