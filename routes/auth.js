@@ -121,9 +121,10 @@ router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   console.log("Headers \n" + JSON.stringify(req.headers, null, 2));
   const userAgent = req.headers['user-agent'];
+  const country = req.headers['cf-ipcountry'];
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
-  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const ip = req.headers['true-client-ip']; 
   const getGeo = geoip.lookup(ip);
   let location = 'Unknown Location';
   if (getGeo) {
