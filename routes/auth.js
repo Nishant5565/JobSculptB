@@ -201,18 +201,11 @@ router.post('/google', async (req, res) => {
       const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '3h' });
       res.json({ token: jwtToken });
     } else {
-      let userName = email.split('@')[0];
-      let existingUser = await User.findOne({ userName });
-
-      while (existingUser) {
-        userName = `${userName}${Math.floor(Math.random() * 10000)}`;
-        existingUser = await User.findOne({ userName });
-      }
 
       const isGoogleUser = true;
       const emailVerified = true;
 
-      user = new User({ googleId, email, isGoogleUser, emailVerified, userName, role, devices: [{ uid: googleId, deviceName, location, lastLogin: new Date() }] });
+      user = new User({ googleId, email, isGoogleUser, emailVerified, role, devices: [{ uid: googleId, deviceName, location, lastLogin: new Date(), ip, location }] });
       await user.save();
       const payload = { user: { id: user.id } };
       const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });

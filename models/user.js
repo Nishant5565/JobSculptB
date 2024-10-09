@@ -16,9 +16,12 @@ const DeviceSchema = new mongoose.Schema({
   },
   platform: {
     type: String,
+    default: null,
   },
   ip: {
     type: String,
+    default: null,
+
   },
 });
 
