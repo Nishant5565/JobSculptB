@@ -26,6 +26,7 @@ const transporter = nodemailer.createTransport({
 
 //! Register user with email and password
 
+
 router.post('/register', async (req, res) => {
   const { email, password, role, theme } = req.body;
 
@@ -39,15 +40,14 @@ router.post('/register', async (req, res) => {
     const userAgent = req.headers['user-agent'];
     const agent = useragent.parse(userAgent);
     const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
-    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const ip = req.clientIp;
     const getGeo = geoip.lookup(ip);
     let location = 'Unknown Location';
     if (getGeo) {
-       location = getGeo.city + ', ' + getGeo.region + ', ' + getGeo.country;
+      location = `${getGeo.city}, ${getGeo.region}, ${getGeo.country}`;
     }
     console.log(getGeo);
     console.log(`IP Address: ${ip}`);
-    const platform = req.headers?.sec-ch-ua-platform;
     console.log(`Location: ${location}`);
 
     user = new User({
@@ -78,18 +78,18 @@ router.post('/register', async (req, res) => {
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
-      { expiresIn: '3h' },
+      { expiresIn: '1h' },
       (err, token) => {
         if (err) throw err;
         res.json({ token });
       }
     );
-    res.json({user});
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
   }
 });
+
 
 module.exports = router;
 //! Check username availability
