@@ -40,21 +40,14 @@ router.post('/register', async (req, res) => {
     const agent = useragent.parse(userAgent);
     const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const getIp = requestIp.getClientIp(req);
-
-    console.log(`IP Address: ${ip}`);
-    console.log(`IP Address: ${getIp}`);
-
-
-    const apiUrl = `http://ip-api.com/json/${ip}?fields=status,message,country,region,city,zip,lat,lon,timezone,isp,org`;
-
-    const apiResponse = await axios.get(apiUrl);
-    const { status, country, region, city } = apiResponse.data;
-
-    let location = 'Unknown location'; // Default
-    if (status === 'success') {
-      location = `${city}, ${region}, ${country}`;
+    const getGeo = geoip.lookup(ip);
+    let location = 'Unknown Location';
+    if (getGeo) {
+       location = getGeo.city + ', ' + getGeo.region + ', ' + getGeo.country;
     }
+    console.log(getGeo);
+    console.log(`IP Address: ${ip}`);
+    const platform = req.headers?.sec-ch-ua-platform;
     console.log(`Location: ${location}`);
 
     user = new User({
@@ -110,7 +103,6 @@ router.post('/check-username', async (req, res) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.user.id);
-    // check if userName coming from request is same as user.userName if so return username is available, else chekc if userName is already taken
     if (user.userName === userName) {
       return res.json({ msg: 'Username is available' });
     }
@@ -130,25 +122,17 @@ router.post('/login', async (req, res) => {
   const userAgent = req.headers['user-agent'];
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
-
-  // Get the user's IP address
   const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  console.log(ip);
-
-  // IP-API endpoint URL (to get location details from the user's IP)
-  const apiUrl = `http://ip-api.com/json/${ip}?fields=status,message,country,region,city,zip,lat,lon,timezone,isp,org`;
+  const getGeo = geoip.lookup(ip);
+  let location = 'Unknown Location';
+  if (getGeo) {
+     location = getGeo.city + ', ' + getGeo.region + ', ' + getGeo.country;
+    }
+    console.log(getGeo);
+    console.log(`IP Address: ${ip}`);
+    console.log(`Location: ${location}`);
 
   try {
-    // Fetch location details from IP-API
-    const apiResponse = await axios.get(apiUrl);
-    const { status, country, region, city } = apiResponse.data;
-
-    let location = 'Unknown location'; // Default
-    if (status === 'success') {
-      location = `${city}, ${region}, ${country}`;
-    }
-
-    // Proceed with login logic
     let user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ msg: 'Invalid Credentials' });
@@ -200,23 +184,16 @@ router.post('/google', async (req, res) => {
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
   const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  const getIp = requestIp.getClientIp(req);
-  console.log(ip);
-  console.log(getIp);
-
-  // IP-API endpoint URL (to get location details from the user's IP)
-  const apiUrl = `http://ip-api.com/json/${ip}?fields=status,message,country,region,city,zip,lat,lon,timezone,isp,org`;
+  const getGeo = geoip.lookup(ip);
+  let location = 'Unknown Location';
+  if (getGeo) {
+     location = getGeo.city + ', ' + getGeo.region + ', ' + getGeo.country;
+    }
+    console.log(getGeo);
+    console.log(`IP Address: ${ip}`);
+    console.log(`Location: ${location}`);
 
   try {
-    // Fetch location details from IP-API
-    const apiResponse = await axios.get(apiUrl);
-    const { status, country, region, city } = apiResponse.data;
-
-    let location = 'Unknown location'; // Default
-    if (status === 'success') {
-      location = `${city}, ${region}, ${country}`;
-    }
-
     const response = await axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${token}`);
     const { sub: googleId, email } = response.data;
 
