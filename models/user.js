@@ -1,10 +1,7 @@
 const mongoose = require('mongoose');
+const { is } = require('useragent');
 
 const DeviceSchema = new mongoose.Schema({
-  uid: {
-    type: String,
-    required: true,
-  },
   deviceName: {
     type: String,
     required: true,
@@ -16,6 +13,12 @@ const DeviceSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
     default: Date.now,
+  },
+  platform: {
+    type: String,
+  },
+  ip: {
+    type: String,
   },
 });
 

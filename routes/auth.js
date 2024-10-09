@@ -39,16 +39,15 @@ router.post('/register', async (req, res) => {
 
     const userAgent = req.headers['user-agent'];
     const agent = useragent.parse(userAgent);
+    const platform= req.headers['sec-ch-ua-platform'];
     const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
-    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const ip = req.headers['true-client-ip'];
     const getGeo = geoip.lookup(ip);
     let location = 'Unknown Location';
     if (getGeo) {
       location = `${getGeo.city}, ${getGeo.region}, ${getGeo.country}`;
     }
-    console.log(getGeo);
-    console.log(`IP Address: ${ip}`);
-    console.log(`Location: ${location}`);
+
 
     user = new User({
       email,
@@ -56,7 +55,7 @@ router.post('/register', async (req, res) => {
       role,
       theme,
       devices: [{
-        uid: email,
+        platform,
         deviceName,
         ip,
         location,
@@ -91,7 +90,6 @@ router.post('/register', async (req, res) => {
 });
 
 
-module.exports = router;
 //! Check username availability
 
 router.post('/check-username', async (req, res) => {
@@ -119,21 +117,16 @@ router.post('/check-username', async (req, res) => {
 //! Login user with email and password
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  console.log("Headers \n" + JSON.stringify(req.headers, null, 2));
   const userAgent = req.headers['user-agent'];
-  const country = req.headers['cf-ipcountry'];
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
+  const platform= req.headers['sec-ch-ua-platform'];
   const ip = req.headers['true-client-ip']; 
   const getGeo = geoip.lookup(ip);
   let location = 'Unknown Location';
   if (getGeo) {
      location = getGeo.city + ', ' + getGeo.region + ', ' + getGeo.country;
     }
-    console.log(getGeo);
-    console.log(`IP Address: ${ip}`);
-    console.log(`Location: ${location}`);
-
   try {
     let user = await User.findOne({ email });
     if (!user) {
@@ -147,7 +140,7 @@ router.post('/login', async (req, res) => {
 
     const deviceExists = user.devices.some(device => device.deviceName === deviceName && device.location === location);
     if (!deviceExists) {
-      user.devices.push({ uid: user.id, deviceName, location, lastLogin: new Date() });
+      user.devices.push({ deviceName, location , ip, lastLogin: new Date(), platform });
       await user.save();
     }
     const theme = user.theme;
@@ -180,20 +173,16 @@ router.post('/login', async (req, res) => {
 // Google OAuth route
 router.post('/google', async (req, res) => {
   const { token, role } = req.body;
-  console.log("Body \n" + JSON.stringify(req.body, null, 2));
-  console.log("Headers \n" + JSON.stringify(req.headers, null, 2));
   const userAgent = req.headers['user-agent'];
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
-  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const platform= req.headers['sec-ch-ua-platform'];
+  const ip = req.headers['true-client-ip'];
   const getGeo = geoip.lookup(ip);
   let location = 'Unknown Location';
   if (getGeo) {
      location = getGeo.city + ', ' + getGeo.region + ', ' + getGeo.country;
     }
-    console.log(getGeo);
-    console.log(`IP Address: ${ip}`);
-    console.log(`Location: ${location}`);
 
   try {
     const response = await axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${token}`);
@@ -205,7 +194,7 @@ router.post('/google', async (req, res) => {
       const deviceExists = user.devices.some(device => device.deviceName === deviceName && device.location === location);
       console.log(deviceExists);
       if (!deviceExists) {
-        user.devices.push({ uid: googleId, deviceName, location, lastLogin: new Date() });
+        user.devices.push({platform,ip, deviceName, location, lastLogin: new Date() });
         await user.save();
       }
       const payload = { user: { id: user.id } };
