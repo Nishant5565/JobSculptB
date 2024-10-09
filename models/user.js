@@ -108,6 +108,7 @@ const UserSchema = new mongoose.Schema({
   name: {
     type: String,
     required: false,
+    default: null,
   },
   twoFactorAuth: {
     type: Boolean,
