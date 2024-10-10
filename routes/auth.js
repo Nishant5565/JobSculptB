@@ -65,7 +65,6 @@ router.post('/register', async (req, res) => {
     const cleanedPlatform = platform ? platform.replace(/"/g, '') : 'Unknown Platform';
     const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
     const ip = req.headers['true-client-ip'];
-    console.log("Headers in JSON:", JSON.stringify(req.headers, null, 2));    
     let location = {
       country: 'Unknown Country',
       city: 'Unknown City',
@@ -82,7 +81,6 @@ router.post('/register', async (req, res) => {
       continent: fetchLocation?.data?.continent || '',
       currency: fetchLocation?.data?.currency?.code
     };
-    console.log("Location:", location);
 
     user = new User({
       email,
@@ -132,9 +130,7 @@ router.post('/login', async (req, res) => {
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
   const platform = req.headers['sec-ch-ua-platform'];
   const cleanedPlatform = platform ? platform.replace(/"/g, '') : 'Unknown Platform';
-  console.log("Platform:", cleanedPlatform); 
   const ip = req.headers['true-client-ip']; 
-  console.log("Headers in JSON:", JSON.stringify(req.headers, null, 2));    
   let location = {
     country: 'Unknown Country',
     city: 'Unknown City',
@@ -152,7 +148,6 @@ router.post('/login', async (req, res) => {
       continent: fetchLocation?.data?.continent || '',
       currency: fetchLocation?.data?.currency?.code
     };
-    console.log("Location:", location);
 
     let user = await User.findOne({ email });
     if (!user) {
@@ -171,6 +166,14 @@ router.post('/login', async (req, res) => {
 
     if (!deviceExists) {
       user.devices.push({ deviceName, location: [location], ip, lastLogin: new Date(), platform: cleanedPlatform });
+      await user.save();
+    }
+    if(deviceExists){
+      user.devices.forEach(device => {
+        if(device.deviceName === deviceName){
+          device.lastLogin = new Date();
+        }
+      });
       await user.save();
     }
 
@@ -210,7 +213,6 @@ router.post('/google', async (req, res) => {
   const platform = req.headers['sec-ch-ua-platform'];
   const cleanedPlatform = platform ? platform.replace(/"/g, '') : 'Unknown Platform';
   const ip = req.headers['true-client-ip'];
-  console.log("Headers in JSON:", JSON.stringify(req.headers, null, 2));    
   let location = {
     country: 'Unknown Country',
     city: 'Unknown City',
@@ -228,7 +230,6 @@ router.post('/google', async (req, res) => {
       continent: fetchLocation?.data?.continent || '',
       currency: fetchLocation?.data?.currency?.code
     };
-    console.log("Location:", location);
 
     const response = await axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${token}`);
     const { sub: googleId, email } = response.data;
@@ -243,6 +244,14 @@ router.post('/google', async (req, res) => {
 
       if (!deviceExists) {
         user.devices.push({ deviceName, location: [location], ip, lastLogin: new Date(), platform: cleanedPlatform });
+        await user.save();
+      }
+      if(deviceExists){
+        user.devices.forEach(device => {
+          if(device.deviceName === deviceName){
+            device.lastLogin = new Date();
+          }
+        });
         await user.save();
       }
 

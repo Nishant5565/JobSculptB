@@ -29,7 +29,7 @@ const DeviceSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  location: [Location],
+  location: Location,
   lastLogin: {
     type: Date,
     default: Date.now,
