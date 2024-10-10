@@ -50,6 +50,10 @@ require('./config/passport')(passport);
 
 // Routes
 
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'Welcome to JobSculpt API' });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/jobsculpt/admin/auth', adminRoutes);
 
