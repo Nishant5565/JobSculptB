@@ -248,7 +248,10 @@ router.post('/google', async (req, res) => {
       }
       if(deviceExists){
         user.devices.forEach(device => {
-          if(device.deviceName === deviceName){
+          console.log(device.deviceName);
+          console.log(deviceName);
+          if(device.deviceName == deviceName){
+            console.log('inside');
             device.lastLogin = new Date();
           }
         });
