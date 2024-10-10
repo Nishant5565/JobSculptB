@@ -25,22 +25,23 @@ const sendLoginEmail = (email, deviceName, location, cleanedPlatform, ip) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'New Device Login',
+    subject: 'Security Alert! New Device Login',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
         <div style="text-align: center; margin-bottom: 20px;">
           <img src="https://res.cloudinary.com/dsjyzqnwu/image/upload/v1725359081/TitleLogo_zjmlrf.png" alt="JobSculpt" style="max-width: 150px;">
         </div>
-        <h2 style="color: #333; text-align: center;">New Device Login</h2>
-        <p style="color: #555; text-align: center;">A new device was used to login to your account. If this was you, you can ignore this email.</p>
-        <p style="color: #555; text-align: center;">If this wasn't you, please contact us immediately.</p>
-        <p style="color: #555; text-align: center;">Device: ${deviceName}</p>
-        <p style="color: #555; text-align: center;">Location: ${location.city}, ${location.country}</p>
-        <p style="color: #555; text-align: center;">Time: ${new Date().toLocaleString()}</p>
-        <p style="color: #555; text-align: center;">Platform: ${cleanedPlatform}</p>
-        <p style="color: #555; text-align: center;">IP: ${ip}</p>
-        <p style="color: #555; text-align: center;">If this was not you, please contact us immediately.</p>
-        <p style="color: #555; text-align: center;">Best regards,<br>JobSculpt Team</p>
+        <h1 style="color: #333; text-align: center;">JobSculpt</h1>
+        <h2 style="color: #333; text-align: center;">Alert! New Device Login!</h2>
+        <h3 style="color: #555; text-align: center;">A new device was used to login to your account. If this was you, you can ignore this email.</h3>
+        <h3 style="color: #555; text-align: center;">If this wasn't you, please contact us immediately.</h3>
+        <h3 style="color: #555; text-align: center;">Device: ${deviceName}</h3>
+        <h3 style="color: #555; text-align: center;">Location: ${location.city}, ${location.country}</h3>
+        <h3 style="color: #555; text-align: center;">Time: ${new Date().toLocaleString()}</h3>
+        <h3 style="color: #555; text-align: center;">Platform: ${cleanedPlatform}</h3>
+        <h3 style="color: #555; text-align: center;">IP: ${ip}</p>
+        <h3 style="color: #555; text-align: center;">If this was not you, login to your account and change your password immediately and remove the device from your account settings.</h3>
+        <h3 style="color: #555; text-align: center;">Best regards,<br>JobSculpt Team</h3>
         <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
           <p>JobSculpt Inc.</p>
           <p>1234 Street Name, City, State, 12345</p>
