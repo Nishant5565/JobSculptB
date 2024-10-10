@@ -21,6 +21,44 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const sendLoginEmail = (email, deviceName, location, cleanedPlatform, ip) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'New Device Login',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="https://res.cloudinary.com/dsjyzqnwu/image/upload/v1725359081/TitleLogo_zjmlrf.png" alt="JobSculpt" style="max-width: 150px;">
+        </div>
+        <h2 style="color: #333; text-align: center;">New Device Login</h2>
+        <p style="color: #555; text-align: center;">A new device was used to login to your account. If this was you, you can ignore this email.</p>
+        <p style="color: #555; text-align: center;">If this wasn't you, please contact us immediately.</p>
+        <p style="color: #555; text-align: center;">Device: ${deviceName}</p>
+        <p style="color: #555; text-align: center;">Location: ${location.city}, ${location.country}</p>
+        <p style="color: #555; text-align: center;">Time: ${new Date().toLocaleString()}</p>
+        <p style="color: #555; text-align: center;">Platform: ${cleanedPlatform}</p>
+        <p style="color: #555; text-align: center;">IP: ${ip}</p>
+        <p style="color: #555; text-align: center;">If this was not you, please contact us immediately.</p>
+        <p style="color: #555; text-align: center;">Best regards,<br>JobSculpt Team</p>
+        <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
+          <p>JobSculpt Inc.</p>
+          <p>1234 Street Name, City, State, 12345</p>
+          <p><a href="${process.env.FrontendUrl}" style="color: #007bff; text-decoration: none;" target="_blank">www.jobsculpt.com</a></p>
+        </div>
+      </div>
+    `,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      return console.log(error);
+    }
+    console.log('Email sent: ' + info.response);
+  });
+};
+
+module.exports = sendLoginEmail;
 
 //! Check username availability
 
@@ -168,6 +206,9 @@ router.post('/login', async (req, res) => {
     if (!deviceExists) {
       user.devices.push({ deviceName, location: location, ip, lastLogin: new Date(), platform: cleanedPlatform });
       await user.save();
+
+      // Send email to user about new device login
+      sendLoginEmail(email, deviceName, location, cleanedPlatform, ip);
     } else {
       user.devices.forEach(device => {
         if (device.deviceName === deviceName) {
@@ -257,6 +298,7 @@ router.post('/google', async (req, res) => {
       if (!deviceExists) {
         user.devices.push({ deviceName, location: location, ip, lastLogin: new Date(), platform: cleanedPlatform });
         await user.save();
+        sendLoginEmail(email, deviceName, location, cleanedPlatform, ip);
       } else {
         user.devices.forEach(device => {
           if (device.deviceName === deviceName) {
