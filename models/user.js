@@ -1,15 +1,35 @@
 const mongoose = require('mongoose');
 const { is } = require('useragent');
 
+const Location = new mongoose.Schema({
+  country: {
+    type: String,
+    required: true,
+  },
+  city: {
+    type: String,
+    required: true,
+  },
+  timeZone: {
+    type: String,
+    required: true,
+  },
+  content : {
+    type : String,
+    required : false
+  },
+  currency: {
+    type: String,
+    required: true,
+  },
+});
+
 const DeviceSchema = new mongoose.Schema({
   deviceName: {
     type: String,
     required: true,
   },
-  location: {
-    type: String,
-    required: true,
-  },
+  location: [Location],
   lastLogin: {
     type: Date,
     default: Date.now,

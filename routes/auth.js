@@ -120,16 +120,30 @@ router.post('/login', async (req, res) => {
   const userAgent = req.headers['user-agent'];
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
-  const platform= req.headers['sec-ch-ua-platform'];
+  const platform = req.headers['sec-ch-ua-platform'];
+  const cleanedPlatform = platform ? platform.replace(/"/g, '') : 'Unknown Platform';
+  console.log("Platform:", cleanedPlatform); 
   const ip = req.headers['true-client-ip']; 
-  console.log("Headers in JSON:", JSON.stringify(req.headers, null, 2));  
-  const getGeo = geoip.lookup(ip);
-  console.log("Get geo is" , getGeo);
-  let location = 'Unknown Location';
-  if (getGeo) {
-     location = getGeo.city + ', ' + getGeo.region + ', ' + getGeo.country;
-    }
+  console.log("Headers in JSON:", JSON.stringify(req.headers, null, 2));    
+  let location = {
+    country: 'Unknown Country',
+    city: 'Unknown City',
+    timeZone: 'Unknown TimeZone',
+    content: '',
+    currency: 'Unknown Currency'
+  };
+
   try {
+    const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
+    location = {
+      country: fetchLocation.data.countryName,
+      city: fetchLocation.data.cityName,
+      timeZone: fetchLocation.data.timeZone,
+      content: fetchLocation.data.content || '',
+      currency: fetchLocation.data.currency
+    };
+    console.log("Location:", location);
+    
     let user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ msg: 'Invalid Credentials' });
@@ -140,11 +154,16 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ msg: 'Invalid Credentials' });
     }
 
-    const deviceExists = user.devices.some(device => device.deviceName === deviceName && device.location === location);
+    const deviceExists = user.devices.some(device => 
+      device.deviceName === deviceName && 
+      device.location.some(loc => loc.city === location.city && loc.country === location.country && loc.timeZone === location.timeZone)
+    );
+
     if (!deviceExists) {
-      user.devices.push({ deviceName, location , ip, lastLogin: new Date(), platform });
+      user.devices.push({ deviceName, location: [location], ip, lastLogin: new Date(), platform: cleanedPlatform });
       await user.save();
     }
+
     const theme = user.theme;
 
     const payload = {
@@ -171,7 +190,6 @@ router.post('/login', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
-
 // Google OAuth route
 router.post('/google', async (req, res) => {
   const { token, role } = req.body;
