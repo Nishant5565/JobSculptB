@@ -48,7 +48,6 @@ router.post('/check-username', async (req, res) => {
 
 
 //! Register user with email and password
-
 router.post('/register', async (req, res) => {
   const { email, password, role, theme } = req.body;
 
@@ -69,7 +68,7 @@ router.post('/register', async (req, res) => {
       country: 'Unknown Country',
       city: 'Unknown City',
       timeZone: 'Unknown TimeZone',
-      content: '',
+      continent: '',
       currency: 'Unknown Currency'
     };
 
@@ -91,7 +90,7 @@ router.post('/register', async (req, res) => {
         platform: cleanedPlatform,
         deviceName,
         ip,
-        location: [location],
+        location: location,
         lastLogin: new Date()
       }]
     });
@@ -122,7 +121,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-//! Login user with email and password
+// !Login user with email and password
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   const userAgent = req.headers['user-agent'];
@@ -135,7 +134,7 @@ router.post('/login', async (req, res) => {
     country: 'Unknown Country',
     city: 'Unknown City',
     timeZone: 'Unknown TimeZone',
-    content: '',
+    continent: '',
     currency: 'Unknown Currency'
   };
 
@@ -161,16 +160,17 @@ router.post('/login', async (req, res) => {
 
     const deviceExists = user.devices.some(device => 
       device.deviceName === deviceName && 
-      device.location.some(loc => loc.city === location.city && loc.country === location.country && loc.timeZone === location.timeZone)
+      device.location.city === location.city && 
+      device.location.country === location.country && 
+      device.location.timeZone === location.timeZone
     );
 
     if (!deviceExists) {
-      user.devices.push({ deviceName, location: [location], ip, lastLogin: new Date(), platform: cleanedPlatform });
+      user.devices.push({ deviceName, location: location, ip, lastLogin: new Date(), platform: cleanedPlatform });
       await user.save();
-    }
-    if(deviceExists){
+    } else {
       user.devices.forEach(device => {
-        if(device.deviceName === deviceName){
+        if (device.deviceName === deviceName) {
           device.lastLogin = new Date();
         }
       });
@@ -212,24 +212,34 @@ router.post('/google', async (req, res) => {
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
   const platform = req.headers['sec-ch-ua-platform'];
   const cleanedPlatform = platform ? platform.replace(/"/g, '') : 'Unknown Platform';
-  const ip = req.headers['true-client-ip'];
+  const ip = req.headers['true-client-ip'] || '::1';
   let location = {
     country: 'Unknown Country',
     city: 'Unknown City',
     timeZone: 'Unknown TimeZone',
-    content: '',
+    continent: '',
     currency: 'Unknown Currency'
   };
 
   try {
     const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
-    location = {
-      country: fetchLocation?.data.countryName,
-      city: fetchLocation?.data.cityName,
-      timeZone: fetchLocation?.data?.timeZone,
-      continent: fetchLocation?.data?.continent || '',
-      currency: fetchLocation?.data?.currency?.code
-    };
+    if (ip === '::1') {
+      location = {
+        country: 'Localhost',
+        city: 'Localhost',
+        timeZone: 'Localhost',
+        continent: 'Localhost',
+        currency: 'Localhost'
+      };
+    } else {
+      location = {
+        country: fetchLocation?.data?.countryName,
+        city: fetchLocation?.data?.cityName,
+        timeZone: fetchLocation?.data?.timeZone,
+        continent: fetchLocation?.data?.continent || '',
+        currency: fetchLocation?.data?.currency?.code
+      };
+    }
 
     const response = await axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${token}`);
     const { sub: googleId, email } = response.data;
@@ -239,19 +249,17 @@ router.post('/google', async (req, res) => {
     if (user) {
       const deviceExists = user.devices.some(device => 
         device.deviceName === deviceName && 
-        device.location.some(loc => loc.city === location.city && loc.country === location.country && loc.timeZone === location.timeZone)
+        device.location.city === location.city && 
+        device.location.country === location.country && 
+        device.location.timeZone === location.timeZone
       );
 
       if (!deviceExists) {
-        user.devices.push({ deviceName, location: [location], ip, lastLogin: new Date(), platform: cleanedPlatform });
+        user.devices.push({ deviceName, location: location, ip, lastLogin: new Date(), platform: cleanedPlatform });
         await user.save();
-      }
-      if(deviceExists){
+      } else {
         user.devices.forEach(device => {
-          console.log(device.deviceName);
-          console.log(deviceName);
-          if(device.deviceName == deviceName){
-            console.log('inside');
+          if (device.deviceName === deviceName) {
             device.lastLogin = new Date();
           }
         });
@@ -265,7 +273,20 @@ router.post('/google', async (req, res) => {
       const isGoogleUser = true;
       const emailVerified = true;
 
-      user = new User({ googleId, email, isGoogleUser, emailVerified, role, devices: [{ platform: cleanedPlatform, deviceName, location: [location], lastLogin: new Date(), ip }] });
+      user = new User({
+        googleId,
+        email,
+        isGoogleUser,
+        emailVerified,
+        role,
+        devices: [{
+          platform: cleanedPlatform,
+          deviceName,
+          location: location,
+          lastLogin: new Date(),
+          ip
+        }]
+      });
       await user.save();
       const payload = { user: { id: user.id } };
       const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -280,6 +301,7 @@ router.post('/google', async (req, res) => {
   }
 });
 
+module.exports = router;
 
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 

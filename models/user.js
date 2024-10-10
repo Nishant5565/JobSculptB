@@ -1,48 +1,22 @@
 const mongoose = require('mongoose');
 const { is } = require('useragent');
 
-const Location = new mongoose.Schema({
-  country: {
-    type: String,
-    required: true,
-  },
-  city: {
-    type: String,
-    required: true,
-  },
-  timeZone: {
-    type: String,
-    required: true,
-  },
-  continent : {
-    type : String,
-    required : false
-  },
-  currency: {
-    type: String,
-    required: true,
-  },
+
+
+const LocationSchema = new mongoose.Schema({
+  country: { type: String, required: true },
+  city: { type: String, required: true },
+  timeZone: { type: String, required: true },
+  continent: { type: String, required: true },
+  currency: { type: String, required: true },
 });
 
 const DeviceSchema = new mongoose.Schema({
-  deviceName: {
-    type: String,
-    required: true,
-  },
-  location: Location,
-  lastLogin: {
-    type: Date,
-    default: Date.now,
-  },
-  platform: {
-    type: String,
-    default: null,
-  },
-  ip: {
-    type: String,
-    default: null,
-
-  },
+  platform: { type: String, required: true },
+  deviceName: { type: String, required: true },
+  ip: { type: String, required: true },
+  location: { type: LocationSchema, required: true },
+  lastLogin: { type: Date, required: true },
 });
 
 const EducationSchema = new mongoose.Schema({
