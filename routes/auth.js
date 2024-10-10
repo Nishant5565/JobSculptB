@@ -429,6 +429,29 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
+
+// ! Reset Password
+
+router.post('/reset-password', async (req, res) => {
+  const { password, token } = req.body;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(400).json({ msg: 'User not found' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+    await user.save();
+    res.json({ msg: 'Password reset successfully' });
+  }
+  catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
 // ! Auth user
 
 router.post('/auth-user', async (req, res) => {
