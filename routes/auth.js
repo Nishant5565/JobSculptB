@@ -34,7 +34,7 @@ const sendLoginEmail = (userName,email, deviceName, location, cleanedPlatform, i
         <h1 style="color: #333; text-align: center;">JobSculpt</h1>
         <h2 style="color: #333; text-align: center;">Hi ${userName} Is this was you ? </h2>
         <h3 style="color: #555; text-align: center;">A new device was used to login to your account. If this was you, you can ignore this email.</h3>
-        <h3 style="color: #555; text-align: center;">If this was not you, login to your account and <a href = '${process.env.FrontendUrl}/forget-password'> change your password immediately </a> and remove the device from your account settings.</h3>
+        <h3 style="color: #555; text-align: center;">If this was not you, login to your account and <a href = '${process.env.FrontendUrl}/reset-password'> change your password immediately </a> and remove the device from your account settings.</h3>
         <h3 style="color: #555; text-align: center;">Device: ${deviceName}</h3>
         <h3 style="color: #555; text-align: center;">Location: ${location.city}, ${location.country}</h3>
         <h3 style="color: #555; text-align: center;">Time: ${new Date().toLocaleString()}</h3>
@@ -58,7 +58,41 @@ const sendLoginEmail = (userName,email, deviceName, location, cleanedPlatform, i
   });
 };
 
-module.exports = sendLoginEmail;
+const sendResetPasswordEmail = (userName, email, token) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'Password Reset Link',
+    html: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <img src="https://res.cloudinary.com/dsjyzqnwu/image/upload/v1725359081/TitleLogo_zjmlrf.png" alt="JobSculpt" style="max-width: 150px;">
+      </div>
+      <h2 style="color: #333; text-align: center;">Hello ${userName} Your Reset Password Link is Here </h2>
+      <p style="color: #555; text-align: center;">Please click the button below to reset your password.</p>
+      <div style="text-align: center; margin: 20px 0;">
+        <a href="${process.env.FrontendUrl}/reset-password/${token}" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #000; border-radius: 10px; text-decoration: none;">Reset Password</a>
+      </div>
+      <p style="color: #555; text-align: center;">If you did not request this email, please ignore it.</p>
+      <p style="color: #555; text-align: center;">Best regards,<br>JobSculpt Team</p>
+      <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
+        <p>JobSculpt Inc.</p>
+        <p>1234 Street Name, City, State, 12345</p>
+        <p><a href="${process.env.FrontendUrl}" style="color: #007bff; text-decoration: none;" target="_blank">www.jobsculpt.com</a></p>
+      </div>
+    </div>
+    `,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error(error.message);
+      return res.status(500).send('Server error');
+    }
+    res.json({ msg: 'Email sent' });
+  }
+  );
+}
 
 //! Check username availability
 
@@ -367,7 +401,33 @@ router.get(
 );
 
 
+// ! Forgot Password
 
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await
+    User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ msg: 'User does not exist' });
+    }
+    const userName = user.userName;
+
+    const payload = {
+      user: {
+        id: user.id,
+      },
+    };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    sendResetPasswordEmail(userName, email, token);
+    
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
 
 // ! Auth user
 
