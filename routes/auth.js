@@ -122,7 +122,9 @@ router.post('/login', async (req, res) => {
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
   const platform= req.headers['sec-ch-ua-platform'];
   const ip = req.headers['true-client-ip']; 
+  console.log("Headers in JSON:", JSON.stringify(req.headers, null, 2));  
   const getGeo = geoip.lookup(ip);
+  console.log("Get geo is" , getGeo);
   let location = 'Unknown Location';
   if (getGeo) {
      location = getGeo.city + ', ' + getGeo.region + ', ' + getGeo.country;
@@ -176,9 +178,11 @@ router.post('/google', async (req, res) => {
   const userAgent = req.headers['user-agent'];
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
+  console.log("Headers in JSON:", JSON.stringify(req.headers, null, 2));  
   const platform= req.headers['sec-ch-ua-platform'];
   const ip = req.headers['true-client-ip'];
   const getGeo = geoip.lookup(ip);
+  console.log("Get geo is" , getGeo);
   let location = 'Unknown Location';
   if (getGeo) {
      location = getGeo.city + ', ' + getGeo.region + ', ' + getGeo.country;
