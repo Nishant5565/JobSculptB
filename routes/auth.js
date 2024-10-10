@@ -22,10 +22,32 @@ const transporter = nodemailer.createTransport({
 });
 
 
+//! Check username availability
+
+router.post('/check-username', async (req, res) => {
+  const { userName } = req.body;
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (user.userName === userName) {
+      return res.json({ msg: 'Username is available' });
+    }
+    const userNameExists = await User.findOne({ userName });
+    if (userNameExists) {
+      return res.status(400).json({ msg: 'Username is already taken' });
+    }
+    res.json({ msg: 'Username is available' });
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+  }
+} );
 
 
 //! Register user with email and password
-
 
 router.post('/register', async (req, res) => {
   const { email, password, role, theme } = req.body;
@@ -39,15 +61,28 @@ router.post('/register', async (req, res) => {
 
     const userAgent = req.headers['user-agent'];
     const agent = useragent.parse(userAgent);
-    const platform= req.headers['sec-ch-ua-platform'];
+    const platform = req.headers['sec-ch-ua-platform'];
+    const cleanedPlatform = platform ? platform.replace(/"/g, '') : 'Unknown Platform';
     const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
     const ip = req.headers['true-client-ip'];
-    const getGeo = geoip.lookup(ip);
-    let location = 'Unknown Location';
-    if (getGeo) {
-      location = `${getGeo.city}, ${getGeo.region}, ${getGeo.country}`;
-    }
+    console.log("Headers in JSON:", JSON.stringify(req.headers, null, 2));    
+    let location = {
+      country: 'Unknown Country',
+      city: 'Unknown City',
+      timeZone: 'Unknown TimeZone',
+      content: '',
+      currency: 'Unknown Currency'
+    };
 
+    const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
+    location = {
+      country: fetchLocation?.data.countryName,
+      city: fetchLocation?.data.cityName,
+      timeZone: fetchLocation?.data?.timeZone,
+      continent: fetchLocation?.data?.continent || '',
+      currency: fetchLocation?.data?.currency?.code
+    };
+    console.log("Location:", location);
 
     user = new User({
       email,
@@ -55,10 +90,10 @@ router.post('/register', async (req, res) => {
       role,
       theme,
       devices: [{
-        platform,
+        platform: cleanedPlatform,
         deviceName,
         ip,
-        location,
+        location: [location],
         lastLogin: new Date()
       }]
     });
@@ -89,31 +124,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-
-//! Check username availability
-
-router.post('/check-username', async (req, res) => {
-  const { userName } = req.body;
-  const token = req.header('x-auth-token');
-  if (!token) {
-    return res.status(401).json({ msg: 'No token, authorization denied' });
-  }
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.user.id);
-    if (user.userName === userName) {
-      return res.json({ msg: 'Username is available' });
-    }
-    const userNameExists = await User.findOne({ userName });
-    if (userNameExists) {
-      return res.status(400).json({ msg: 'Username is already taken' });
-    }
-    res.json({ msg: 'Username is available' });
-  } catch (err) {
-    res.status(401).json({ msg: 'Token is not valid' });
-  }
-} );
-
 //! Login user with email and password
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
@@ -136,14 +146,14 @@ router.post('/login', async (req, res) => {
   try {
     const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
     location = {
-      country: fetchLocation.data.countryName,
-      city: fetchLocation.data.cityName,
-      timeZone: fetchLocation.data.timeZone,
-      content: fetchLocation.data.content || '',
-      currency: fetchLocation.data.currency
+      country: fetchLocation?.data.countryName,
+      city: fetchLocation?.data.cityName,
+      timeZone: fetchLocation?.data?.timeZone,
+      continent: fetchLocation?.data?.continent || '',
+      currency: fetchLocation?.data?.currency?.code
     };
     console.log("Location:", location);
-    
+
     let user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ msg: 'Invalid Credentials' });
@@ -190,44 +200,60 @@ router.post('/login', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
-// Google OAuth route
+
+//! Google OAuth route
 router.post('/google', async (req, res) => {
   const { token, role } = req.body;
   const userAgent = req.headers['user-agent'];
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
-  console.log("Headers in JSON:", JSON.stringify(req.headers, null, 2));  
-  const platform= req.headers['sec-ch-ua-platform'];
+  const platform = req.headers['sec-ch-ua-platform'];
+  const cleanedPlatform = platform ? platform.replace(/"/g, '') : 'Unknown Platform';
   const ip = req.headers['true-client-ip'];
-  const getGeo = geoip.lookup(ip);
-  console.log("Get geo is" , getGeo);
-  let location = 'Unknown Location';
-  if (getGeo) {
-     location = getGeo.city + ', ' + getGeo.region + ', ' + getGeo.country;
-    }
+  console.log("Headers in JSON:", JSON.stringify(req.headers, null, 2));    
+  let location = {
+    country: 'Unknown Country',
+    city: 'Unknown City',
+    timeZone: 'Unknown TimeZone',
+    content: '',
+    currency: 'Unknown Currency'
+  };
 
   try {
+    const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
+    location = {
+      country: fetchLocation?.data.countryName,
+      city: fetchLocation?.data.cityName,
+      timeZone: fetchLocation?.data?.timeZone,
+      continent: fetchLocation?.data?.continent || '',
+      currency: fetchLocation?.data?.currency?.code
+    };
+    console.log("Location:", location);
+
     const response = await axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${token}`);
     const { sub: googleId, email } = response.data;
 
     let user = await User.findOne({ googleId });
 
     if (user) {
-      const deviceExists = user.devices.some(device => device.deviceName === deviceName && device.location === location);
-      console.log(deviceExists);
+      const deviceExists = user.devices.some(device => 
+        device.deviceName === deviceName && 
+        device.location.some(loc => loc.city === location.city && loc.country === location.country && loc.timeZone === location.timeZone)
+      );
+
       if (!deviceExists) {
-        user.devices.push({platform,ip, deviceName, location, lastLogin: new Date() });
+        user.devices.push({ deviceName, location: [location], ip, lastLogin: new Date(), platform: cleanedPlatform });
         await user.save();
       }
+
       const payload = { user: { id: user.id } };
       const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '3h' });
       res.json({ token: jwtToken });
     } else {
-
       const isGoogleUser = true;
       const emailVerified = true;
 
-      user = new User({ googleId, email, isGoogleUser, emailVerified, role, devices: [{ uid: googleId, deviceName, location, lastLogin: new Date(), ip, location }] });
+      user = new User({ googleId, email, isGoogleUser, emailVerified, role, devices: [{ platform: cleanedPlatform, deviceName, location: [location], lastLogin: new Date(), ip }] });
       await user.save();
       const payload = { user: { id: user.id } };
       const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });

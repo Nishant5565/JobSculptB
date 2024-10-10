@@ -14,7 +14,7 @@ const Location = new mongoose.Schema({
     type: String,
     required: true,
   },
-  content : {
+  continent : {
     type : String,
     required : false
   },
