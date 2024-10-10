@@ -50,8 +50,13 @@ require('./config/passport')(passport);
 
 // Routes
 
-app.get('/', (req, res) => {
-  res.status(200).json({ message: 'Welcome to JobSculpt API' });
+app.post('/', (req, res) => {
+    const SecretCode = req.body.SecretCode;
+    if (SecretCode === process.env.SECRET_CODE) {
+        res.status(200).json({ success: true });
+    } else {
+        res.status(400).json({ success: false });
+    }
 });
 
 app.use('/api/auth', authRoutes);
