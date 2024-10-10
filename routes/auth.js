@@ -32,15 +32,14 @@ const sendLoginEmail = (userName,email, deviceName, location, cleanedPlatform, i
           <img src="https://res.cloudinary.com/dsjyzqnwu/image/upload/v1725359081/TitleLogo_zjmlrf.png" alt="JobSculpt" style="max-width: 150px;">
         </div>
         <h1 style="color: #333; text-align: center;">JobSculpt</h1>
-        <h2 style="color: #333; text-align: center;">Hi ${userName}New Device Login!</h2>
+        <h2 style="color: #333; text-align: center;">Hi ${userName} Is this was you ? </h2>
         <h3 style="color: #555; text-align: center;">A new device was used to login to your account. If this was you, you can ignore this email.</h3>
-        <h3 style="color: #555; text-align: center;">If this wasn't you, please contact us immediately.</h3>
+        <h3 style="color: #555; text-align: center;">If this was not you, login to your account and <a href = '${process.env.FrontendUrl}/forget-password'> change your password immediately </a> and remove the device from your account settings.</h3>
         <h3 style="color: #555; text-align: center;">Device: ${deviceName}</h3>
         <h3 style="color: #555; text-align: center;">Location: ${location.city}, ${location.country}</h3>
         <h3 style="color: #555; text-align: center;">Time: ${new Date().toLocaleString()}</h3>
         <h3 style="color: #555; text-align: center;">Platform: ${cleanedPlatform}</h3>
         <h3 style="color: #555; text-align: center;">IP: ${ip}</p>
-        <h3 style="color: #555; text-align: center;">If this was not you, login to your account and change your password immediately and remove the device from your account settings.</h3>
         <h3 style="color: #555; text-align: center;">Best regards,<br>JobSculpt Team</h3>
         <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
           <p>JobSculpt Inc.</p>
