@@ -135,7 +135,7 @@ router.post('/register', async (req, res) => {
     const platform = req.headers['sec-ch-ua-platform'];
     const cleanedPlatform = platform ? platform.replace(/"/g, '') : 'Unknown Platform';
     const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
-    const ip = req.headers['true-client-ip'];
+    const ip = req.headers['true-client-ip'] || '::1';
     let location = {
       country: 'Unknown Country',
       city: 'Unknown City',
@@ -145,14 +145,15 @@ router.post('/register', async (req, res) => {
     };
 
     const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
-    location = {
-      country: fetchLocation?.data.countryName,
-      city: fetchLocation?.data.cityName,
-      timeZone: fetchLocation?.data?.timeZone,
-      continent: fetchLocation?.data?.continent || '',
-      currency: fetchLocation?.data?.currency?.code
-    };
-
+    if(ip === '::1'){
+      location = {
+        country: fetchLocation?.data?.countryName,
+        city: fetchLocation?.data?.cityName,
+        timeZone: fetchLocation?.data?.timeZone,
+        continent: fetchLocation?.data?.continent || '',
+        currency: fetchLocation?.data?.currency?.code
+      };
+    }
     user = new User({
       email,
       password,
@@ -201,7 +202,7 @@ router.post('/login', async (req, res) => {
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
   const platform = req.headers['sec-ch-ua-platform'];
   const cleanedPlatform = platform ? platform.replace(/"/g, '') : 'Unknown Platform';
-  const ip = req.headers['true-client-ip']; 
+  const ip = req.headers['true-client-ip'] || '::1';
   let location = {
     country: 'Unknown Country',
     city: 'Unknown City',
@@ -212,13 +213,15 @@ router.post('/login', async (req, res) => {
 
   try {
     const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
-    location = {
-      country: fetchLocation?.data.countryName,
-      city: fetchLocation?.data.cityName,
-      timeZone: fetchLocation?.data?.timeZone,
-      continent: fetchLocation?.data?.continent || '',
-      currency: fetchLocation?.data?.currency?.code
-    };
+    if (ip === '::1') {
+      location = {
+        country: fetchLocation?.data.countryName,
+        city: fetchLocation?.data.cityName,
+        timeZone: fetchLocation?.data?.timeZone,
+        continent: fetchLocation?.data?.continent || '',
+        currency: fetchLocation?.data?.currency?.code
+      };
+    }
 
     let user = await User.findOne({ email });
     if (!user) {
@@ -399,16 +402,30 @@ router.get(
     res.redirect(`${process.env.FrontendUrl}`); // Redirect to the frontend
   }
 );
+// ! Check token validity
 
+router.post('/check-token', async (req, res) => {
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+
+    res.json({ msg: 'Token is valid' });
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+  }
+});
 
 // ! Forgot Password
 
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
-
+  console.log(email);
   try {
-    const user = await
-    User.findOne({ email });
+    const user = await User.findOne({ email });
+    console.log(user);
     if (!user) {
       return res.status(400).json({ msg: 'User does not exist' });
     }
@@ -422,7 +439,7 @@ router.post('/forgot-password', async (req, res) => {
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     sendResetPasswordEmail(userName, email, token);
-    
+    res.json({ msg: 'Email sent' });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
