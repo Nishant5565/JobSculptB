@@ -21,7 +21,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendLoginEmail = (email, deviceName, location, cleanedPlatform, ip) => {
+const sendLoginEmail = (userName,email, deviceName, location, cleanedPlatform, ip) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -32,7 +32,7 @@ const sendLoginEmail = (email, deviceName, location, cleanedPlatform, ip) => {
           <img src="https://res.cloudinary.com/dsjyzqnwu/image/upload/v1725359081/TitleLogo_zjmlrf.png" alt="JobSculpt" style="max-width: 150px;">
         </div>
         <h1 style="color: #333; text-align: center;">JobSculpt</h1>
-        <h2 style="color: #333; text-align: center;">Alert! New Device Login!</h2>
+        <h2 style="color: #333; text-align: center;">Hi ${userName}New Device Login!</h2>
         <h3 style="color: #555; text-align: center;">A new device was used to login to your account. If this was you, you can ignore this email.</h3>
         <h3 style="color: #555; text-align: center;">If this wasn't you, please contact us immediately.</h3>
         <h3 style="color: #555; text-align: center;">Device: ${deviceName}</h3>
@@ -209,7 +209,8 @@ router.post('/login', async (req, res) => {
       await user.save();
 
       // Send email to user about new device login
-      sendLoginEmail(email, deviceName, location, cleanedPlatform, ip);
+      const userName = user.userName;
+      sendLoginEmail( userName, email, deviceName, location, cleanedPlatform, ip);
     } else {
       user.devices.forEach(device => {
         if (device.deviceName === deviceName) {
@@ -299,7 +300,8 @@ router.post('/google', async (req, res) => {
       if (!deviceExists) {
         user.devices.push({ deviceName, location: location, ip, lastLogin: new Date(), platform: cleanedPlatform });
         await user.save();
-        sendLoginEmail(email, deviceName, location, cleanedPlatform, ip);
+        const userName = user.userName;
+        sendLoginEmail(userName,email, deviceName, location, cleanedPlatform, ip);
       } else {
         user.devices.forEach(device => {
           if (device.deviceName === deviceName) {
