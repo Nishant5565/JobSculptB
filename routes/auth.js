@@ -144,8 +144,16 @@ router.post('/register', async (req, res) => {
       currency: 'Unknown Currency'
     };
 
+    if (ip === '::1') {
+      location = {
+        country: 'Localhost',
+        city: 'Localhost',
+        timeZone: '+0',
+        continent: 'Localhost',
+        currency: 'Localhost'
+      };
+    } else {
     const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
-    if(ip === '::1'){
       location = {
         country: fetchLocation?.data?.countryName,
         city: fetchLocation?.data?.cityName,
@@ -212,11 +220,19 @@ router.post('/login', async (req, res) => {
   };
 
   try {
-    const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
     if (ip === '::1') {
       location = {
-        country: fetchLocation?.data.countryName,
-        city: fetchLocation?.data.cityName,
+        country: 'Localhost',
+        city: 'Localhost',
+        timeZone: '+0',
+        continent: 'Localhost',
+        currency: 'Localhost'
+      };
+    } else {
+    const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
+      location = {
+        country: fetchLocation?.data?.countryName,
+        city: fetchLocation?.data?.cityName,
         timeZone: fetchLocation?.data?.timeZone,
         continent: fetchLocation?.data?.continent || '',
         currency: fetchLocation?.data?.currency?.code
@@ -244,7 +260,6 @@ router.post('/login', async (req, res) => {
       user.devices.push({ deviceName, location: location, ip, lastLogin: new Date(), platform: cleanedPlatform });
       await user.save();
 
-      // Send email to user about new device login
       const userName = user.userName;
       sendLoginEmail( userName, email, deviceName, location, cleanedPlatform, ip);
     } else {
@@ -301,16 +316,16 @@ router.post('/google', async (req, res) => {
   };
 
   try {
-    const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
     if (ip === '::1') {
       location = {
         country: 'Localhost',
         city: 'Localhost',
-        timeZone: 'Localhost',
+        timeZone: '+0',
         continent: 'Localhost',
         currency: 'Localhost'
       };
     } else {
+    const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
       location = {
         country: fetchLocation?.data?.countryName,
         city: fetchLocation?.data?.cityName,
@@ -382,7 +397,6 @@ router.post('/google', async (req, res) => {
   }
 });
 
-module.exports = router;
 
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
@@ -402,6 +416,37 @@ router.get(
     res.redirect(`${process.env.FrontendUrl}`); // Redirect to the frontend
   }
 );
+
+
+// ! Remove Device
+
+router.post('/remove-device', async (req, res) => {
+  const { deviceName } = req.body;
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    const removeIndex = user.devices.map((device) => device.deviceName).indexOf(deviceName);
+    if (removeIndex === -1) {
+      return res.status(404).json({ msg: 'Device not found' });
+    }
+    user.devices.splice(removeIndex, 1);
+    await user.save();
+    // Clear the 
+
+    res.json(user.devices);
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+    console.error(err.message);
+  }
+});
+
 // ! Check token validity
 
 router.post('/check-token', async (req, res) => {
@@ -417,6 +462,8 @@ router.post('/check-token', async (req, res) => {
     res.status(401).json({ msg: 'Token is not valid' });
   }
 });
+
+
 
 // ! Forgot Password
 
