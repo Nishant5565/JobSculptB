@@ -553,10 +553,6 @@ router.post('/auth-user', async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded.user;
     const user = await User.findById(req.user.id);
-    const device = user.devices.find((device) => device.deviceName === req.body.deviceName);
-    if (!device) {
-      return res.status(404).json({ msg: 'Device not found' });
-    }
     res.json(user);
   } catch (err) {
     res.status(401).json({ msg: 'Token is not valid' });
