@@ -204,7 +204,7 @@ router.post('/register', async (req, res) => {
 
 // !Login user with email and password
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, rememberMe } = req.body;
   const userAgent = req.headers['user-agent'];
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
@@ -282,10 +282,9 @@ router.post('/login', async (req, res) => {
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
-      { expiresIn: '3h' },
+      { expiresIn: rememberMe ? '365d' : '1h' },
       (err, token) => {
         if (err) throw err;
-
         if (!user.emailVerified) {
           return res.status(200).json({ token, msg: 'Email is not Verified', theme });
         }
@@ -300,7 +299,7 @@ router.post('/login', async (req, res) => {
 
 //! Google OAuth route
 router.post('/google', async (req, res) => {
-  const { token, role } = req.body;
+  const { token, role, rememberMe } = req.body;
   const userAgent = req.headers['user-agent'];
   const agent = useragent.parse(userAgent);
   const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
@@ -363,7 +362,8 @@ router.post('/google', async (req, res) => {
       }
 
       const payload = { user: { id: user.id } };
-      const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '3h' });
+      const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, rememberMe ? { expiresIn: '365d' } : { expiresIn: '1h' });
+
       res.json({ token: jwtToken });
     } else {
       const isGoogleUser = true;
@@ -417,6 +417,30 @@ router.get(
   }
 );
 
+// ! Logout user
+
+router.post('/logout', async (req, res) => {
+  const token = req.header('x-auth-token');
+
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    tokenBlacklist.push(token);
+    setTimeout(() => {
+      const index = tokenBlacklist.indexOf(token);
+      if (index > -1) {
+        tokenBlacklist.splice(index, 1);
+      }
+    }, 365 * 24 * 60 * 60 * 1000); 
+    res.clearCookie('token');
+    res.json({ msg: 'Logged out successfully' });
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+    console.error(err.message);
+  }
+});
 
 // ! Remove Device
 
@@ -438,7 +462,9 @@ router.post('/remove-device', async (req, res) => {
     }
     user.devices.splice(removeIndex, 1);
     await user.save();
-    // Clear the 
+    // destroy the cookie 
+    
+
 
     res.json(user.devices);
   } catch (err) {
@@ -527,11 +553,14 @@ router.post('/auth-user', async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded.user;
     const user = await User.findById(req.user.id);
+    const device = user.devices.find((device) => device.deviceName === req.body.deviceName);
+    if (!device) {
+      return res.status(404).json({ msg: 'Device not found' });
+    }
     res.json(user);
   } catch (err) {
     res.status(401).json({ msg: 'Token is not valid' });
   }
-
 });
 
 //! check if User have Verified their email 
