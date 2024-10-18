@@ -110,7 +110,7 @@ router.post('/check-username', async (req, res) => {
     }
     const userNameExists = await User.findOne({ userName });
     if (userNameExists) {
-      return res.status(400).json({ msg: 'Username is already taken' });
+      return res.status(200).json({ msg: 'Username is already taken' });
     }
     res.json({ msg: 'Username is available' });
   } catch (err) {
@@ -163,6 +163,7 @@ router.post('/register', async (req, res) => {
       };
     }
     user = new User({
+      userName: email.split('@')[0],
       email,
       password,
       role,
@@ -370,6 +371,7 @@ router.post('/google', async (req, res) => {
       const emailVerified = true;
 
       user = new User({
+        userName: email.split('@')[0],
         googleId,
         email,
         isGoogleUser,
@@ -389,6 +391,7 @@ router.post('/google', async (req, res) => {
       res.json({ token: jwtToken });
     }
   } catch (err) {
+    console.error(err.message);
     if (err.message.includes('E11000')) {
       return res.status(400).json({ msg: 'User already exists with this email' });
     }
@@ -766,7 +769,7 @@ router.post('/update-username', async (req, res) => {
     await user.save();
     res.json(user);
   } catch (err) {
-    res.status(401).json({ msg: 'Token is not valid' });
+    res.status(401).json({ msg: err.message });
   }
 });
 
