@@ -1037,4 +1037,51 @@ router.post('/delete-user-skill', async (req, res) => {
 });
 
 
+// ! Get skillsHiring for employer
+
+router.get('/skills-hiring', async (req, res) => {
+
+
+  const token =req.headers['x-auth-token'];
+
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    const skills = user.skillsHiring;
+    console.log(skills);
+    res.json(skills);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// ! Add skillsHiring for employer
+
+router.post('/add-skills-hiring', async (req, res) => {
+  const { skill } = req.body;
+  console.log(skill);
+  const token = req.header('x-auth-token');
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    if (user.skillsHiring.some((item) => item.skill === skill)) {
+      return res.status(400).json({ msg: 'Skill already exists' });
+    }
+    user.skillsHiring.unshift({ skill });
+
+    await user.save();
+    
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 module.exports = router;

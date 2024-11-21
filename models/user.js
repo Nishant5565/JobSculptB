@@ -151,7 +151,7 @@ const UserSchema = new mongoose.Schema({
   },
 
   skillsHiring: {
-    type: [String],
+    type: [],
     default: [],
     required: false,
   }

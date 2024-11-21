@@ -33,6 +33,7 @@ app.use(cors({
     'http://localhost:5174',
     'https://nishant5565.github.io/',
     'https://nishant5565.github.io',
+    'nishantkumarsingh.me',
     'https://nishant5565.github.io/JobSculpt',
     'https://v811xkq7-5173.inc1.devtunnels.ms/',
     'https://v811xkq7-5173.inc1.devtunnels.ms',
