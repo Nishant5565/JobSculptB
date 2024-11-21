@@ -149,6 +149,13 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+
+  skillsHiring: {
+    type: [String],
+    default: [],
+    required: false,
+  }
+
 });
 
 module.exports = mongoose.model('User', UserSchema);

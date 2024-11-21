@@ -32,7 +32,7 @@ const sendLoginEmail = (userName,email, deviceName, location, cleanedPlatform, i
           <img src="https://res.cloudinary.com/dsjyzqnwu/image/upload/v1725359081/TitleLogo_zjmlrf.png" alt="JobSculpt" style="max-width: 150px;">
         </div>
         <h1 style="color: #333; text-align: center;">JobSculpt</h1>
-        <h2 style="color: #333; text-align: center;">Hi ${userName} Is this was you ? </h2>
+        <h2 style="color: #333; text-align: center;">Hi ${userName == undefined ? email : userName} Is this was you ? </h2>
         <h3 style="color: #555; text-align: center;">A new device was used to login to your account. If this was you, you can ignore this email.</h3>
         <h3 style="color: #555; text-align: center;">If this was not you, login to your account and <a href = '${process.env.FrontendUrl}/reset-password'> change your password immediately </a> and remove the device from your account settings.</h3>
         <h3 style="color: #555; text-align: center;">Device: ${deviceName}</h3>
@@ -44,7 +44,9 @@ const sendLoginEmail = (userName,email, deviceName, location, cleanedPlatform, i
         <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
           <p>JobSculpt Inc.</p>
           <p>1234 Street Name, City, State, 12345</p>
-          <p><a href="${process.env.FrontendUrl}" style="color: #007bff; text-decoration: none;" target="_blank">www.jobsculpt.com</a></p>
+          <p><a href="${process.env.FrontendUrl}" style="color: #007bff; text-decoration: none;" target="_blank">
+            ${process.env.FrontendUrl}
+            </a></p>
         </div>
       </div>
     `,
@@ -146,11 +148,11 @@ router.post('/register', async (req, res) => {
 
     if (ip === '::1') {
       location = {
-        country: 'Localhost',
-        city: 'Localhost',
-        timeZone: '+0',
-        continent: 'Localhost',
-        currency: 'Localhost'
+        country: 'India',
+        city: 'Mumbai',
+        timeZone: '+5:30',
+        continent: 'Asia',
+        currency: 'INR'
       };
     } else {
     const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
@@ -223,11 +225,12 @@ router.post('/login', async (req, res) => {
   try {
     if (ip === '::1') {
       location = {
-        country: 'Localhost',
-        city: 'Localhost',
-        timeZone: '+0',
-        continent: 'Localhost',
-        currency: 'Localhost'
+
+        country: 'India',
+        city: 'Mumbai',
+        timeZone: '+5:30',
+        continent: 'Asia',
+        currency: 'INR'
       };
     } else {
     const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
@@ -318,11 +321,12 @@ router.post('/google', async (req, res) => {
   try {
     if (ip === '::1') {
       location = {
-        country: 'Localhost',
-        city: 'Localhost',
-        timeZone: '+0',
-        continent: 'Localhost',
-        currency: 'Localhost'
+
+        country: 'India',
+        city: 'Mumbai',
+        timeZone: '+5:30',
+        continent: 'Asia',
+        currency: 'INR'
       };
     } else {
     const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
@@ -658,7 +662,7 @@ router.get('/verify-email', async (req, res) => {
     user.emailVerified = true;
     await user.save();
 
-    const frontendUrl = `${process.env.FrontendUrl}email-verified`;
+    const frontendUrl = `${process.env.FrontendUrl}/email-verified`;
     res.redirect(frontendUrl);
 
   } catch (err) {
