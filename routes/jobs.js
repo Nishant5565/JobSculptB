@@ -146,8 +146,8 @@ router.post('/find-jobs', async (req, res) => {
 // Apply for a job
 router.post('/apply-job', async (req, res) => {
   const token = req.header('x-auth-token');
-  const { jobId, userId } = req.body;
-
+  const { jobId, userId, coverLetter } = req.body;
+  console.log(token, jobId, userId, coverLetter);
   if (!token) {
     return res.status(401).json({ msg: 'No token, authorization denied' });
   }
@@ -172,11 +172,11 @@ router.post('/apply-job', async (req, res) => {
       job.applicants = [];
     }
 
-    if (job.applicants.includes(userId)) {
+    if (job.applicants.some(applicant => applicant.userId.toString() === userId)) {
       return res.status(400).json({ msg: 'Already applied' });
     }
 
-    job.applicants.push(userId);
+    job.applicants.push({ userId, coverLetter });
     await job.save();
     res.json({ success: true });
   } catch (err) {
@@ -185,6 +185,69 @@ router.post('/apply-job', async (req, res) => {
   }
 });
 
+// Show all applicants for the particular job
 
+router.get('/applicants/:jobId', async (req, res) => {
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    const job = await Job.findById(req.params.jobId);
+    if (!job) {
+      return res.status(404).json({ msg: 'Job not found' });
+    }
+    
+    if (job.userId.toString() !== user.id) {
+      return res.status(401).json({ msg: 'Not authorized' });
+    }
+
+    res.json(job.applicants);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+}
+);
+
+// Get applicants for a specific job
+router.get('/job-applicants/:jobId', async (req, res) => {
+  const token = req.header('x-auth-token');
+  if (!token) {
+    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    const job = await Job.findById(req.params.jobId);
+    if (!job) {
+      return res.status(404).json({ msg: 'Job not found' });
+    }
+
+    if (job.userId.toString() !== user.id) {
+      return res.status(401).json({ msg: 'Not authorized' });
+    }
+
+    const userDetails = await User.find({ _id: { $in: job.applicants.map(applicant => applicant.userId) } });
+
+    
+    res.status(200).json({ applicants: job.applicants, userDetails });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
 
 module.exports = router;

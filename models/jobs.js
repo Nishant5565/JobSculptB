@@ -35,11 +35,16 @@ const JobSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  applicants: {
+  applicants: [{
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      
-  },
+    },
+    coverLetter: {
+      type: String,
+      required: true,
+    }
+  }],
 });
 
 module.exports = mongoose.model('Job', JobSchema);
