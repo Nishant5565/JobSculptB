@@ -289,10 +289,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: rememberMe ? '365d' : '1h' },
       (err, token) => {
         if (err) throw err;
-        if (!user.emailVerified) {
-          return res.status(200).json({ token, msg: 'Email is not Verified', theme });
-        }
-        res.json({ token, theme });
+        res.json({ token, theme,user });
       }
     );
   } catch (err) {
@@ -1051,7 +1048,6 @@ router.get('/skills-hiring', async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.user.id);
     const skills = user.skillsHiring;
-    console.log(skills);
     res.json(skills);
   } catch (err) {
     console.error(err.message);
@@ -1063,7 +1059,6 @@ router.get('/skills-hiring', async (req, res) => {
 
 router.post('/add-skills-hiring', async (req, res) => {
   const { skill } = req.body;
-  console.log(skill);
   const token = req.header('x-auth-token');
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -1077,7 +1072,35 @@ router.post('/add-skills-hiring', async (req, res) => {
     user.skillsHiring.unshift({ skill });
 
     await user.save();
+    res.status(200).json(user.skillsHiring);
     
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+
+// ! Delete skillsHiring for employer
+
+router.post('/delete-skill-hiring', async (req, res) => {
+  const { skill } = req.body;
+  const token = req.header('x-auth-token');
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    const removeIndex = user.skillsHiring.map((item) => item.skill).indexOf(skill);
+    if (removeIndex === -1) {
+      return res.status(404).json({ msg: 'Skill not found' });
+    }
+
+    user.skillsHiring.splice(removeIndex, 1);
+    await user.save();
+    res.json(user.skillsHiring);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');

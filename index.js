@@ -11,6 +11,7 @@ const Skill = require('./models/skills');
 const cloudinary = require('./routes/cloudinary');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./adminPanel/admin');
+const jobs = require('./routes/jobs');
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ app.post('/', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/jobsculpt/admin/auth', adminRoutes);
+app.use('/api/', jobs);
 
 app.post('/upload', async (req, res) => {
   try {
