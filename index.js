@@ -31,14 +31,11 @@ connectDB();
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'http://localhost:5174',
     'https://nishant5565.github.io/',
-    'https://nishant5565.github.io',
     'http://nishantkumarsingh.me',
     'https://nishantkumarsingh.me/JobSculpt',
-    'https://nishant5565.github.io/JobSculpt',
     'https://v811xkq7-5173.inc1.devtunnels.ms/',
-    'https://v811xkq7-5173.inc1.devtunnels.ms',
+    'https://jobsculpt.netlify.app',
     'https://jobsculpt.netlify.app/'
 
   ],
