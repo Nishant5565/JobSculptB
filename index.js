@@ -36,7 +36,8 @@ app.use(cors({
     'https://nishantkumarsingh.me/JobSculpt',
     'https://v811xkq7-5173.inc1.devtunnels.ms/',
     'https://jobsculpt.netlify.app',
-    'https://jobsculpt.netlify.app/'
+    'https://jobsculpt.netlify.app/',
+    'https://nishantkumarsingh.me/'
 
   ],
   credentials: true
