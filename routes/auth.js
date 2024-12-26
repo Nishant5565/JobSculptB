@@ -155,7 +155,7 @@ router.post('/register', async (req, res) => {
         currency: 'INR'
       };
     } else {
-    const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
+      const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
       location = {
         country: fetchLocation?.data?.countryName,
         city: fetchLocation?.data?.cityName,
@@ -164,8 +164,9 @@ router.post('/register', async (req, res) => {
         currency: fetchLocation?.data?.currency?.code
       };
     }
+
     user = new User({
-      userName: email.split('@')[0],
+      userName: email.split('@')[0], // Ensure userName is set correctly
       email,
       password,
       role,
@@ -201,7 +202,111 @@ router.post('/register', async (req, res) => {
     );
   } catch (err) {
     console.error(err.message);
+    if (err.code === 11000) {
+      return res.status(400).json({ msg: 'User already exists with this email' });
+    }
     res.status(500).send('Server error');
+  }
+});
+
+router.post('/google', async (req, res) => {
+  const { token, role, rememberMe } = req.body;
+  const userAgent = req.headers['user-agent'];
+  const agent = useragent.parse(userAgent);
+  const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
+  const platform = req.headers['sec-ch-ua-platform'];
+  const cleanedPlatform = platform ? platform.replace(/"/g, '') : 'Unknown Platform';
+  const ip = req.headers['true-client-ip'] || '::1';
+  let location = {
+    country: 'Unknown Country',
+    city: 'Unknown City',
+    timeZone: 'Unknown TimeZone',
+    continent: '',
+    currency: 'Unknown Currency'
+  };
+
+  try {
+    if (ip === '::1') {
+      location = {
+        country: 'India',
+        city: 'Mumbai',
+        timeZone: '+5:30',
+        continent: 'Asia',
+        currency: 'INR'
+      };
+    } else {
+      const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
+      location = {
+        country: fetchLocation?.data?.countryName,
+        city: fetchLocation?.data?.cityName,
+        timeZone: fetchLocation?.data?.timeZone,
+        continent: fetchLocation?.data?.continent || '',
+        currency: fetchLocation?.data?.currency?.code
+      };
+    }
+
+    const response = await axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${token}`);
+    const { sub: googleId, email } = response.data;
+
+    let user = await User.findOne({ googleId });
+
+    if (user) {
+      const deviceExists = user.devices.some(device => 
+        device.deviceName === deviceName && 
+        device.location.city === location.city && 
+        device.location.country === location.country && 
+        device.location.timeZone === location.timeZone
+      );
+
+      if (!deviceExists) {
+        user.devices.push({ deviceName, location: location, ip, lastLogin: new Date(), platform: cleanedPlatform });
+        await user.save();
+        const userName = user.userName;
+        sendLoginEmail(userName, email, deviceName, location, cleanedPlatform, ip);
+      } else {
+        user.devices.forEach(device => {
+          if (device.deviceName === deviceName) {
+            device.lastLogin = new Date();
+          }
+        });
+        await user.save();
+      }
+
+      const payload = { user: { id: user.id } };
+      const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, rememberMe ? { expiresIn: '365d' } : { expiresIn: '1h' });
+
+      res.json({ token: jwtToken });
+    } else {
+      const isGoogleUser = true;
+      const emailVerified = true;
+      console.log(email.split('@')[0]);
+
+      user = new User({
+        userName: email.split('@')[0], 
+        googleId,
+        email,
+        isGoogleUser,
+        emailVerified,
+        role,
+        devices: [{
+          platform: cleanedPlatform,
+          deviceName,
+          location: location,
+          lastLogin: new Date(),
+          ip
+        }]
+      });
+      await user.save();
+      const payload = { user: { id: user.id } };
+      const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+      res.json({ token: jwtToken });
+    }
+  } catch (err) {
+    console.error(err.message);
+    if (err.message.includes('E11000')) {
+      return res.status(400).json({ msg: 'User already exists with this email' });
+    }
+    res.status(500).json({ msg: err.message });
   }
 });
 
@@ -298,108 +403,6 @@ router.post('/login', async (req, res) => {
   }
 });
 
-//! Google OAuth route
-router.post('/google', async (req, res) => {
-  const { token, role, rememberMe } = req.body;
-  const userAgent = req.headers['user-agent'];
-  const agent = useragent.parse(userAgent);
-  const deviceName = `${agent.toAgent()} on ${agent.os.toString()}`;
-  const platform = req.headers['sec-ch-ua-platform'];
-  const cleanedPlatform = platform ? platform.replace(/"/g, '') : 'Unknown Platform';
-  const ip = req.headers['true-client-ip'] || '::1';
-  let location = {
-    country: 'Unknown Country',
-    city: 'Unknown City',
-    timeZone: 'Unknown TimeZone',
-    continent: '',
-    currency: 'Unknown Currency'
-  };
-
-  try {
-    if (ip === '::1') {
-      location = {
-
-        country: 'India',
-        city: 'Mumbai',
-        timeZone: '+5:30',
-        continent: 'Asia',
-        currency: 'INR'
-      };
-    } else {
-    const fetchLocation = await axios.get(`https://freeipapi.com/api/json/${ip}`);
-      location = {
-        country: fetchLocation?.data?.countryName,
-        city: fetchLocation?.data?.cityName,
-        timeZone: fetchLocation?.data?.timeZone,
-        continent: fetchLocation?.data?.continent || '',
-        currency: fetchLocation?.data?.currency?.code
-      };
-    }
-
-    const response = await axios.get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${token}`);
-    const { sub: googleId, email } = response.data;
-
-    let user = await User.findOne({ googleId });
-
-    if (user) {
-      const deviceExists = user.devices.some(device => 
-        device.deviceName === deviceName && 
-        device.location.city === location.city && 
-        device.location.country === location.country && 
-        device.location.timeZone === location.timeZone
-      );
-
-      if (!deviceExists) {
-        user.devices.push({ deviceName, location: location, ip, lastLogin: new Date(), platform: cleanedPlatform });
-        await user.save();
-        const userName = user.userName;
-        sendLoginEmail(userName,email, deviceName, location, cleanedPlatform, ip);
-      } else {
-        user.devices.forEach(device => {
-          if (device.deviceName === deviceName) {
-            device.lastLogin = new Date();
-          }
-        });
-        await user.save();
-      }
-
-      const payload = { user: { id: user.id } };
-      const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, rememberMe ? { expiresIn: '365d' } : { expiresIn: '1h' });
-
-      res.json({ token: jwtToken });
-    } else {
-      const isGoogleUser = true;
-      const emailVerified = true;
-
-      user = new User({
-        userName: email.split('@')[0],
-        googleId,
-        email,
-        isGoogleUser,
-        emailVerified,
-        role,
-        devices: [{
-          platform: cleanedPlatform,
-          deviceName,
-          location: location,
-          lastLogin: new Date(),
-          ip
-        }]
-      });
-      await user.save();
-      const payload = { user: { id: user.id } };
-      const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-      res.json({ token: jwtToken });
-    }
-  } catch (err) {
-    console.error(err.message);
-    if (err.message.includes('E11000')) {
-      return res.status(400).json({ msg: 'User already exists with this email' });
-    }
-    console.error(err.message);
-    res.status(500).json({ msg: err.message });
-  }
-});
 
 
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));

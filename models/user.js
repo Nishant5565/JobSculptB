@@ -68,7 +68,6 @@ const WorkExperienceSchema = new mongoose.Schema({
 const UserSchema = new mongoose.Schema({
   userName: {
     type: String,
-    unique: true,
   },
   role : {
     type: String,
