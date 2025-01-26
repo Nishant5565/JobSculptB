@@ -27,22 +27,21 @@ connectDB();
 //   console.log('Request Origin:', req.headers.origin);
 //   next();
 // });
-
 app.use(cors({
   origin: [
-    'http://localhost:5173',
-    'https://nishant5565.github.io/',
+    'https://nishant5565.github.io',
     'http://nishantkumarsingh.me',
+    'https://nishantkumarsingh.me',
     'https://nishantkumarsingh.me/JobSculpt',
-    'https://v811xkq7-5173.inc1.devtunnels.ms/',
+    'http://nishantkumarsingh.me/JobSculpt',
     'https://jobsculpt.netlify.app',
-    'https://jobsculpt.netlify.app/',
-    'https://nishantkumarsingh.me/'
-
+    'https://nishantkumarsingh.me/',
+    'http://nishantkumarsingh.me/',
+    "https://nishantkumarsingh.me/JobSculpt/",
+    "http://nishantkumarsingh.me/JobSculpt/",
   ],
   credentials: true
 }));
-
 app.use(fileUpload({ useTempFiles: true }));
 app.use(express.json());
 app.use(session({ secret: 'secret', resave: true, saveUninitialized: true }));
