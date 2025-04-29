@@ -12,13 +12,19 @@ const geoip = require('geoip-lite');
 
 
 //! Node Mailer Setup  
-
 const transporter = nodemailer.createTransport({
-  service: 'Gmail', // E.g., 'Gmail', 'Outlook', or use your own SMTP settings
+  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // true for 465, false for other ports
   auth: {
-    user: process.env.EMAIL,
-    pass: process.env.PASSWORD,
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASS,
   },
+  pool: true,
+  maxConnections: 1,
+  rateLimit: 5,
+  socketTimeout: 5000,
 });
 
 const sendLoginEmail = (userName,email, deviceName, location, cleanedPlatform, ip) => {
@@ -609,7 +615,7 @@ router.post('/send-email-verification-link', async (req, res) => {
     const demoToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `JobSculpt <${process.env.GMAIL_USER}>`,
       to: user.email,
       subject: 'Email Verification Link',
       html: `
